@@ -330,7 +330,10 @@
   $$('[data-qty]').forEach(function (q) {
     var input = $('input', q);
     var min = +input.min || 1, max = +input.max || 999;
-    function set(v) { input.value = Math.max(min, Math.min(max, v || min)); }
+    function set(v) {
+      input.value = Math.max(min, Math.min(max, v || min));
+      q.dispatchEvent(new CustomEvent('qty:change', { bubbles: true, detail: { value: +input.value } }));
+    }
     $('[data-qty-minus]', q).addEventListener('click', function () { set(+input.value - 1); });
     $('[data-qty-plus]', q).addEventListener('click', function () { set(+input.value + 1); });
     input.addEventListener('change', function () { set(parseInt(input.value, 10)); });
@@ -584,4 +587,99 @@
       setTimeout(function () { b.classList.remove('is-loading'); }, 900);
     });
   });
+  /* ==========================================================================
+     КОШИК
+     ========================================================================== */
+  function plural(n, one, few, many) {
+    var m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+    return many;
+  }
+  function money(v) { return v + ' грн'; }
+
+  var cart = $('[data-cart]');
+  if (cart) {
+    var recalc = function () {
+      var items = $$('[data-cart-item]', cart);
+      var count = 0, subtotal = 0, total = 0;
+      items.forEach(function (it) {
+        var qty = +$('.qty__input', it).value || 1;
+        var price = +it.getAttribute('data-price'), old = +it.getAttribute('data-old') || price;
+        count += qty; subtotal += old * qty; total += price * qty;
+        $('[data-line-total]', it).textContent = money(price * qty);
+      });
+      var set = function (sel, txt) { $$(sel).forEach(function (el) { el.textContent = txt; }); };
+      set('[data-sum-count]', count);
+      set('[data-sum-subtotal]', money(subtotal));
+      set('[data-sum-discount]', money(subtotal - total));
+      set('[data-sum-total]', money(total));
+      set('[data-cart-count]', count + ' ' + plural(count, 'товар', 'товари', 'товарів'));
+      var empty = $('[data-cart-empty]', cart);
+      if (empty) empty.hidden = items.length > 0;
+      var btn = $('.summary__btn', cart);
+      if (btn) btn.classList.toggle('is-disabled', items.length === 0);
+      // TODO: синхронізація з кошиком на бекенді
+    };
+    cart.addEventListener('qty:change', recalc);
+    cart.addEventListener('click', function (e) {
+      var rm = e.target.closest('[data-cart-remove]');
+      if (!rm) return;
+      var it = rm.closest('[data-cart-item]');
+      it.classList.add('is-removing');
+      setTimeout(function () { it.remove(); recalc(); }, reduceMotion ? 0 : 250);
+    });
+    var promo = $('[data-promo]', cart);
+    promo && promo.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var v = $('input', promo).value.trim();
+      promo.classList.toggle('is-error', !v);
+      promo.classList.toggle('is-applied', !!v);
+      // TODO: перевірка промокоду на бекенді
+    });
+  }
+
+  /* ==========================================================================
+     ОФОРМЛЕННЯ ЗАМОВЛЕННЯ
+     ========================================================================== */
+  var checkout = $('[data-checkout]');
+  if (checkout) {
+    // перемикання варіантів доставки / оплати; поля неактивних варіантів вимикаються
+    $$('[data-options]', checkout).forEach(function (group) {
+      var opts = $$('[data-opt]', group);
+      function sync() {
+        opts.forEach(function (o) {
+          var on = $('.radio', o).checked;
+          o.classList.toggle('is-active', on);
+          $$('.ship-opt__body input, .ship-opt__body select', o).forEach(function (f) { f.disabled = !on; });
+        });
+      }
+      group.addEventListener('change', function (e) { if (e.target.classList.contains('radio')) sync(); });
+      sync();
+    });
+    // швидкий вибір міста
+    checkout.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-city]');
+      if (!b) return;
+      var sel = checkout.querySelector('select[name="' + b.getAttribute('data-city-target') + '"]');
+      if (sel) { sel.value = b.getAttribute('data-city'); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+    });
+    // телефон: підставляємо код країни
+    $$('[data-phone]', checkout).forEach(function (i) {
+      i.addEventListener('focus', function () { if (!i.value) i.value = '+38 '; });
+      i.addEventListener('blur', function () { if (i.value.trim() === '+38') i.value = ''; });
+    });
+    checkout.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!checkout.checkValidity()) {
+        $$('.co-step', checkout).forEach(function (s) { s.classList.add('was-validated'); });
+        var bad = checkout.querySelector(':invalid') || document.querySelector('[form="checkout-form"]:invalid');
+        if (bad) { bad.focus(); if (bad.reportValidity) bad.reportValidity(); }
+        return;
+      }
+      // TODO: відправка замовлення та перехід на оплату
+      var btn = document.querySelector('[data-checkout-submit]');
+      if (btn) { btn.classList.add('is-done'); btn.textContent = 'Замовлення прийнято'; }
+    });
+  }
 })();
