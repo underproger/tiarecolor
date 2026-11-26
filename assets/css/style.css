@@ -2276,6 +2276,24 @@ a.post-tag:hover { background: var(--c-pink-100); }
 .post-related .post-grid { margin-top: 30px; }
 
 /* ==========================================================================
+   КАРТА СТОРІНОК (pages.html)
+   ========================================================================== */
+.pages-map { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 20px; margin: 40px 0 90px; }
+.pages-map__group { padding: 26px 26px 20px; border-radius: var(--radius); box-shadow: inset 0 0 0 1px var(--c-line); }
+.pages-map__title { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 18px; line-height: 22px; font-weight: 700; text-transform: uppercase; }
+.pages-map__title span { display: grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 12px; background: var(--c-pink-50); font-size: 12px; line-height: 1; }
+.pages-map__list { margin: 0; padding: 0; list-style: none; }
+.pages-map__list li + li { border-top: 1px solid var(--c-line); }
+.pages-map__link { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; padding: 12px 0; text-align: left; transition: color .2s; }
+.pages-map__link b { display: block; font-size: 16px; line-height: 20px; font-weight: 700; }
+.pages-map__link small { display: block; margin-top: 2px; font-size: 13px; line-height: 16px; color: var(--c-gray-dark); }
+.pages-map__link .icon { flex: none; width: 9.5px; height: 9.5px; color: var(--c-pink-300); transition: transform .25s var(--ease); }
+.pages-map__link:hover { color: var(--c-pink-300); }
+.pages-map__link:hover .icon { transform: translate(2px, -2px); }
+.pages-map__note { margin-top: 12px; padding-top: 14px; border-top: 1px solid var(--c-line); font-size: 13px; line-height: 18px; color: var(--c-gray-dark); }
+.pages-map__note a { color: var(--c-text); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ==========================================================================
    RESPONSIVE
    ========================================================================== */
 @media (max-width: 1360px) {
@@ -3056,6 +3074,13 @@ a.post-tag:hover { background: var(--c-pink-100); }
 }
 @media (max-width: 560px) {
   .post-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+}
+@media (max-width: 1023px) {
+  .pages-map { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .pages-map { grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 28px 0 56px; }
+  .pages-map__group { padding: 20px 18px 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }

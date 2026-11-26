@@ -1943,7 +1943,7 @@
       '.about-mission', '.contacts-band', '.contact-form', '.contacts-aside', '.info-section', '.vf-form', '.mp-cta', '.loy-title', '.loy-lead',
       '.acc-card', '.discount-banner', '.otable-wrap', '.fav__empty', '.catalog-head', '.filter-pills'].join(',');
     var RV_GROUP = ['.catalog__grid', '.advantages__list', '.reviews__list', '.insta__grid', '.about-stats', '.info-steps', '.loy-levels',
-      '.loy-terms', '.mp-perks', '.faq-list', '.p-reviews__list', '.acc-stats', '.addr-grid', '.fav__grid', '.post-grid'].join(',');
+      '.loy-terms', '.mp-perks', '.faq-list', '.p-reviews__list', '.acc-stats', '.addr-grid', '.fav__grid', '.post-grid', '.pages-map'].join(',');
     var fold = window.innerHeight * 0.92;
     var below = function (el) { var r = el.getBoundingClientRect(); return r.height > 0 && r.top > fold; };
     var marked = [];
