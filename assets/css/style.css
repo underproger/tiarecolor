@@ -666,7 +666,9 @@ h1, h2, h3, p { margin: 0; }
 .footer__logo .icon--logo { width: 205px; height: 48px; margin-top: 2px; }
 .footer__tagline { margin-top: 7px; font-size: 10px; line-height: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .18em; color: #fff; }
 .footer__about { max-width: 250px; margin-top: 20px; line-height: 16.5px; }
-.footer__title { margin-bottom: 15px; color: #fff; font-size: 14px; line-height: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: .01em; }
+.footer__title { display: block; margin-bottom: 15px; color: #fff; font-size: 14px; line-height: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: .01em; }
+a.footer__title { transition: color .2s; }
+a.footer__title:hover { color: var(--c-pink-100); }
 .footer__links { display: grid; gap: 15px; }
 .footer__links li { line-height: 13px; }
 .footer__socials { margin-top: 50px; }
@@ -674,7 +676,7 @@ h1, h2, h3, p { margin: 0; }
 .footer__bottom { border-top: 1px solid var(--c-footer-line); }
 .footer__bottom-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 95px; }
 .footer__legal { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 30px; padding-left: 2px; }
-.footer__docs { display: inline-flex; gap: 11px; }
+.footer__docs { display: inline-flex; flex-wrap: wrap; gap: 6px 11px; }
 .footer__pay { display: flex; align-items: center; gap: 39px; margin-right: 3px; }
 .footer__pay .icon--visa { width: 51px; height: 16.4px; }
 .footer__pay .icon--mastercard { width: 31px; height: 24px; }
@@ -1688,6 +1690,82 @@ html.has-modal { overflow: hidden; }
 .about-advantages { margin-top: 73px; }
 
 /* ==========================================================================
+   FAQ / КОНТАКТИ
+   ========================================================================== */
+.info-head { margin-top: 14px; }
+.info-head--center { text-align: center; }
+.info-head__title { font-size: 30px; line-height: 34px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.info-head__sub { margin-top: 16px; font-size: 18px; line-height: 22px; }
+
+.faq { width: calc(100% - 2 * var(--gutter)); max-width: 1070px; margin: 0 auto; padding-bottom: 82px; }
+.faq__filters { justify-content: center; gap: 14px; margin: 32px 0 24px; }
+.faq-list { border-bottom: 1px solid var(--c-line); }
+.faq-item { border-top: 1px solid var(--c-line); transition: border-color .2s; }
+.faq-item[open] { border-top-color: var(--c-pink-300); }
+.faq-item[hidden] { display: none; }
+.faq-item__q {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 79px; padding: 20px 0;
+  font-size: 24px; line-height: 28px; cursor: pointer; list-style: none; transition: color .2s;
+}
+.faq-item__q::-webkit-details-marker { display: none; }
+.faq-item__q::marker { content: ""; }
+.faq-item__q:hover { color: var(--c-pink-300); }
+.faq-item[open] .faq-item__q { padding: 15px 0 8px; color: var(--c-pink-300); }
+.faq-item__btn { display: grid; place-items: center; flex: 0 0 35px; height: 35px; border-radius: 50%; background: var(--c-pink-50); color: var(--c-text); transition: background-color .2s, color .2s; }
+.faq-item__btn .icon { grid-area: 1 / 1; width: 15px; height: 15px; transition: opacity .2s, transform .2s; }
+.faq-item__btn .icon--close { width: 11.4px; height: 11.4px; opacity: 0; transform: rotate(-90deg); }
+.faq-item__q:hover .faq-item__btn { background: var(--c-pink-100); }
+.faq-item[open] .faq-item__btn { background: var(--c-text); color: #fff; }
+.faq-item[open] .faq-item__btn .icon--plus { opacity: 0; transform: rotate(90deg); }
+.faq-item[open] .faq-item__btn .icon--close { opacity: 1; transform: none; }
+.faq-item__a { max-width: 960px; padding-bottom: 30px; font-size: 18px; line-height: 25px; }
+.faq-item[open] .faq-item__a { animation: faq-in .25s var(--ease); }
+@keyframes faq-in { from { opacity: 0; transform: translateY(-4px); } }
+.faq__empty { padding: 32px 0; text-align: center; color: var(--c-gray-dark); }
+
+.contacts-band { margin-top: 31px; background: var(--c-beige); }
+.contacts-band__inner { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 24px; min-height: 166px; padding: 47px calc(var(--gutter) + 35px) 52px; }
+.contacts-band__label { font-size: 12px; line-height: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.contacts-band__value { display: inline-flex; align-items: center; gap: 14px; margin-top: 15px; font-size: 24px; line-height: 30px; font-weight: 600; white-space: nowrap; transition: color .2s; }
+a.contacts-band__value:hover { color: var(--c-pink-300); }
+.contacts-band__value .icon { flex: none; color: var(--c-pink-300); }
+.icon--ct-phone, .icon--ct-clock { width: 29.7px; height: 29.7px; }
+.icon--ct-mail { width: 32.2px; height: 24.5px; }
+.contacts-band__socials { margin-top: 15px; }
+.contacts-band__socials .socials__link { background: var(--c-pink-300); }
+.contacts-band__socials .socials__link:hover { background: var(--c-pink-100); }
+.contacts-grid { display: grid; grid-template-columns: 410px minmax(0, 1fr); gap: 30px; align-items: start; margin-top: 80px; }
+.contacts-aside { display: grid; gap: 30px; }
+.contact-card { padding: 22px 30px 26px; border-radius: var(--radius); box-shadow: inset 0 0 0 1px var(--c-line); }
+.contact-card__label { font-size: 12px; line-height: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.contact-card__np { display: flex; align-items: center; gap: 20px; margin-top: 14px; font-size: 14px; line-height: 16px; }
+.contact-card__np .icon { flex: 0 0 36px; width: 36px; height: 35px; }
+.contact-card__np p { max-width: 260px; }
+.messengers { display: grid; gap: 27px; margin: 15px 0 0; padding: 0; list-style: none; }
+.messenger { display: flex; align-items: center; gap: 20px; font-size: 18px; line-height: 22px; transition: color .2s; }
+.messenger b { display: block; font-size: 14px; line-height: 16px; font-weight: 600; }
+.messenger .icon { flex: 0 0 35px; width: 35px; height: 35px; transition: transform .2s; }
+.messenger .icon--ct-whatsapp { width: 40.1px; height: 37.1px; margin: -1px -2.5px 0 -3.5px; flex-basis: 40.1px; }
+.messenger:hover { color: var(--c-pink-300); }
+.messenger:hover .icon { transform: scale(1.06); }
+.contact-form { padding: 37px 38px 52px 41px; border-radius: var(--radius); box-shadow: inset 0 0 0 1px var(--c-line); }
+.contact-form__title { font-size: 24px; line-height: 26px; font-weight: 600; }
+.contact-form__text { margin-top: 12px; font-size: 18px; line-height: 22px; }
+.contact-form__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin-top: 18px; }
+.contact-form__wide { grid-column: 1 / -1; }
+.field textarea {
+  display: block; width: 100%; min-height: 94px; padding: 20px 20px; border: 0; border-radius: 15px; background: var(--c-beige);
+  font: inherit; font-size: 14px; line-height: 18px; color: var(--c-text); resize: vertical; outline: none; transition: box-shadow .2s;
+}
+.field textarea::placeholder { color: var(--c-gray-dark); opacity: 1; }
+.field textarea:focus { box-shadow: inset 0 0 0 1px var(--c-pink-300); }
+.contact-form .field input { color: var(--c-text); }
+.contact-form.was-validated .field :invalid { box-shadow: inset 0 0 0 1px #e0475a; background: #fdf3f4; }
+.contact-form__btn { width: 368px; max-width: 100%; height: 55px; margin-top: 16px; border-radius: 28px; font-size: 14px; letter-spacing: .04em; }
+.contact-form__btn.is-done { background: #00a67e; color: #fff; }
+.info-advantages { margin-top: 97px; }
+
+/* ==========================================================================
    RESPONSIVE
    ========================================================================== */
 @media (max-width: 1360px) {
@@ -2241,6 +2319,40 @@ html.has-modal { overflow: hidden; }
   .about-story__btn { width: 100%; }
   .about-mission { margin-top: 40px; font-size: 14px; line-height: 21px; }
   .about-advantages { margin-top: 40px; }
+}
+
+/* ---- FAQ / Контакти: адаптив ---- */
+@media (max-width: 1280px) {
+  .contacts-band__value { font-size: 20px; }
+}
+@media (max-width: 1100px) {
+  .contacts-band__inner { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 24px; padding: 36px var(--gutter); }
+  .contacts-grid { grid-template-columns: 340px minmax(0, 1fr); }
+}
+@media (max-width: 1023px) {
+  .contacts-grid { grid-template-columns: minmax(0, 1fr); margin-top: 48px; }
+  .contacts-aside { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .info-advantages { margin-top: 56px; }
+}
+@media (max-width: 767px) {
+  .info-head__title { font-size: 22px; line-height: 26px; }
+  .info-head__sub { margin-top: 10px; font-size: 15px; line-height: 20px; }
+  .faq { padding-bottom: 48px; }
+  .faq__filters { justify-content: flex-start; gap: 8px; margin: 22px 0 16px; }
+  .faq-item__q { min-height: 64px; padding: 16px 0; font-size: 17px; line-height: 22px; gap: 16px; }
+  .faq-item__a { padding-bottom: 20px; font-size: 15px; line-height: 22px; }
+  .contacts-band { margin-top: 22px; }
+  .contacts-band__inner { grid-template-columns: minmax(0, 1fr); gap: 22px; padding: 28px var(--gutter); }
+  .contacts-band__value { margin-top: 10px; font-size: 19px; }
+  .contacts-aside { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .contacts-grid { gap: 16px; margin-top: 32px; }
+  .contact-card { padding: 20px 18px; }
+  .contact-form { padding: 24px 18px; }
+  .contact-form__title { font-size: 20px; }
+  .contact-form__text { font-size: 15px; line-height: 20px; }
+  .contact-form__grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .contact-form__btn { width: 100%; }
+  .info-advantages { margin-top: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

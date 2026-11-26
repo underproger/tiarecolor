@@ -1192,7 +1192,7 @@
   });
 
   // телефон у формах кабінету — той самий код країни, що й в оформленні
-  $$('.account-page [data-phone]').forEach(function (i) {
+  $$('.account-page [data-phone], .contacts-page [data-phone]').forEach(function (i) {
     i.addEventListener('focus', function () { if (!i.value) i.value = '+38 '; });
     i.addEventListener('blur', function () { if (i.value.trim() === '+38') i.value = ''; });
     i.addEventListener('input', function () {
@@ -1222,9 +1222,9 @@
       if (!btn) return;
       var old = btn.textContent;
       btn.classList.add('is-done');
-      btn.textContent = 'Збережено';
+      btn.textContent = form.getAttribute('data-done') || 'Збережено';
       setTimeout(function () { btn.classList.remove('is-done'); btn.textContent = old; }, 1600);
-      if (form.hasAttribute('data-password-form')) form.reset();
+      if (form.hasAttribute('data-password-form') || form.hasAttribute('data-done')) form.reset();
     });
   });
 
@@ -1340,4 +1340,25 @@
     // TODO: сторінка / крок відновлення пароля (макета немає)
     $$('.auth__link', auth).forEach(function (l) { l.addEventListener('click', function (e) { e.preventDefault(); }); });
   }
+  /* ---------- FAQ: фільтр за темою ---------- */
+  $$('[data-faq]').forEach(function (box) {
+    var items = $$('.faq-item', box);
+    var empty = $('[data-faq-empty]', box);
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-filter]');
+      if (!b) return;
+      var f = b.getAttribute('data-filter'), shown = 0;
+      $$('[data-filter]', box).forEach(function (x) {
+        x.classList.toggle('is-active', x === b);
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      items.forEach(function (it) {
+        var on = f === 'all' || (' ' + it.getAttribute('data-cat') + ' ').indexOf(' ' + f + ' ') !== -1;
+        it.hidden = !on;
+        if (!on) it.open = false;
+        if (on) shown++;
+      });
+      if (empty) empty.hidden = shown > 0;
+    });
+  });
 })();
