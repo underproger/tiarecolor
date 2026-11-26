@@ -373,17 +373,37 @@
   /* ---------- Таби ---------- */
   $$('[data-tabs]').forEach(function (wrap) {
     var tabs = $$('[role="tab"]', wrap);
+    var body = $('.product-tabs__body', wrap);
+    var reviews = $('[data-reviews]');
+    // Вкладка «Відгуки» не має власної панелі: блок відгуків під табами
+    // «підтягується» під таби (клас is-tab), а решта панелей ховається.
     function activate(tab, focus) {
+      var isReviews = tab.hasAttribute('data-tab-reviews');
       tabs.forEach(function (t) {
         var on = t === tab;
         t.classList.toggle('is-active', on);
         t.setAttribute('aria-selected', String(on));
         t.tabIndex = on ? 0 : -1;
+        if (t.hasAttribute('data-tab-reviews')) return;
         var panel = document.getElementById(t.getAttribute('aria-controls'));
         if (panel) panel.hidden = !on;
       });
+      if (body) body.hidden = isReviews;
+      if (reviews) reviews.classList.toggle('is-tab', isReviews);
       if (focus) tab.focus();
+      // на мобільному підкрутити смугу табів до активного
+      var bar = tab.parentNode;
+      if (bar.scrollWidth > bar.clientWidth) bar.scrollTo({ left: tab.offsetLeft - 16, behavior: reduceMotion ? 'auto' : 'smooth' });
     }
+    $$('[data-open-reviews]').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        var t = $('[data-tab-reviews]', wrap);
+        if (!t) return;
+        e.preventDefault();
+        activate(t);
+        wrap.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+      });
+    });
     tabs.forEach(function (t, i) {
       t.addEventListener('click', function () { activate(t); });
       t.addEventListener('keydown', function (e) {
