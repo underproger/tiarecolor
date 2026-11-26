@@ -1607,6 +1607,55 @@ h1, h2, h3, p { margin: 0; }
 .status-legend__item--no .acc-stat__icon { color: #e24646; }
 
 /* ==========================================================================
+   ВХІД / РЕЄСТРАЦІЯ (модальне вікно <dialog>)
+   ========================================================================== */
+.auth {
+  width: calc(100% - 32px); max-width: 574px; max-height: calc(100dvh - 32px); margin: auto; padding: 54px 52px 52px;
+  border: 0; border-radius: var(--radius); background: #fff; color: var(--c-text); overflow-y: auto; overscroll-behavior: contain;
+}
+.auth::backdrop { background: rgba(14, 14, 14, .62); }
+.auth[open] { animation: auth-in .25s var(--ease); }
+.auth[open]::backdrop { animation: auth-fade .25s ease; }
+@keyframes auth-in { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+@keyframes auth-fade { from { opacity: 0; } }
+.auth__close {
+  position: absolute; right: 13px; top: 19px; display: grid; place-items: center; width: 38px; height: 38px;
+  color: var(--c-gray-dark); transition: color .2s, transform .2s;
+}
+.auth__close .icon { width: 17px; height: 17px; }
+.auth__close:hover { color: var(--c-text); transform: rotate(90deg); }
+.auth__tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--c-line); }
+.auth__tab {
+  position: relative; padding: 0 0 12px; font-size: 20px; line-height: 22px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--c-gray-dark); transition: color .2s;
+}
+.auth__tab::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: var(--c-text); transform: scaleX(0); transition: transform .25s var(--ease); }
+.auth__tab:hover { color: var(--c-text); }
+.auth__tab.is-active { font-weight: 600; color: var(--c-text); }
+.auth__tab.is-active::after { transform: none; }
+.auth__panel { display: grid; gap: 15px; margin-top: 31px; }
+.auth__panel[hidden] { display: none; }
+.auth__panel .field input { color: var(--c-text); }
+.auth__panel.was-validated .field input:invalid { box-shadow: inset 0 0 0 1px #e0475a; background: #fdf3f4; }
+.auth__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 16px; margin: -1px 0; }
+.auth__check { font-size: 14px; color: var(--c-gray-dark); }
+.auth__check--agree .check__box { box-shadow: inset 0 0 0 1px var(--c-gray-dark); }
+.auth__panel.was-validated .auth__check--agree input:invalid + .check__box { box-shadow: inset 0 0 0 1px #e0475a; background: #fdf3f4; }
+.auth__link { font-size: 14px; text-decoration: underline; text-underline-offset: 3px; transition: color .2s; }
+.auth__link:hover { color: var(--c-pink-300); }
+.auth__panel .btn--block { margin-top: -1px; }
+.auth__panel .btn.is-done { background: #00a67e; color: #fff; }
+.auth__promo {
+  display: flex; flex-direction: column; align-items: center; margin-top: 31px; padding: 21px 24px 24px; border-radius: var(--radius);
+  background: #f2b8bd url("../img/account/auth-promo.webp") center / cover no-repeat; color: #fff; text-align: center;
+}
+.auth__promo-title { font-size: 16px; line-height: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.auth__promo-text { max-width: 400px; margin-top: 2px; font-size: 13px; line-height: 13px; }
+.auth__promo-btn { gap: 12px; height: 42px; min-width: 196px; margin-top: 17px; border-radius: 21px; font-size: 12px; letter-spacing: .08em; }
+.auth__promo-btn .icon { width: 9.5px; height: 9.5px; }
+html.has-modal { overflow: hidden; }
+
+/* ==========================================================================
    RESPONSIVE
    ========================================================================== */
 @media (max-width: 1360px) {
@@ -2116,6 +2165,16 @@ h1, h2, h3, p { margin: 0; }
   .verify-steps__arrow .icon { transform: rotate(90deg); }
   .status-data { padding: 20px 18px; font-size: 16px; line-height: 26px; }
   .acc-note { padding: 10px 18px; border-radius: 16px; }
+}
+
+/* ---- Вхід / реєстрація: адаптив ---- */
+@media (max-width: 767px) {
+  .auth { width: calc(100% - 24px); max-height: calc(100dvh - 24px); padding: 40px 18px 20px; }
+  .auth__close { right: 6px; top: 6px; }
+  .auth__tab { padding-bottom: 12px; font-size: 16px; }
+  .auth__panel { gap: 12px; margin-top: 22px; }
+  .auth__promo { margin-top: 22px; padding: 18px 16px 20px; }
+  .auth__promo-text { line-height: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

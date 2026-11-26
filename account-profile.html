@@ -40,7 +40,7 @@
         <a class="header__master" href="#"><svg class="icon icon--master" aria-hidden="true"><use href="#i-master"></use></svg><span>Майстрам</span></a>
         <nav class="header__actions" aria-label="Кабінет та кошик">
           <a class="header-action header-action--search-toggle" href="#" data-search-toggle aria-label="Пошук"><svg class="icon icon--search header-action__icon" aria-hidden="true"><use href="#i-search"></use></svg></a>
-          <a class="header-action" href="account.html"><svg class="icon icon--user header-action__icon" aria-hidden="true"><use href="#i-user"></use></svg><span class="header-action__label">Кабінет</span></a>
+          <a class="header-action" href="account.html" data-auth-open><svg class="icon icon--user header-action__icon" aria-hidden="true"><use href="#i-user"></use></svg><span class="header-action__label">Кабінет</span></a>
           <a class="header-action" href="#"><svg class="icon icon--heart header-action__icon" aria-hidden="true"><use href="#i-heart"></use></svg><span class="header-action__label">Обране</span></a>
           <a class="header-action" href="cart.html"><svg class="icon icon--cart header-action__icon" aria-hidden="true"><use href="#i-cart"></use></svg><span class="header-action__label">Кошик</span></a>
         </nav>
@@ -136,7 +136,7 @@
       <ul><li><a class="drawer__link" href="catalog.html">Каталог товарів<svg class="icon icon--chevron-sm drawer__chevron" aria-hidden="true"><use href="#i-chevron-sm"></use></svg></a></li><li><a class="drawer__link" href="catalog.html">Готові рішення<svg class="icon icon--chevron-sm drawer__chevron" aria-hidden="true"><use href="#i-chevron-sm"></use></svg></a></li><li><a class="drawer__link" href="catalog.html">Фарбування<svg class="icon icon--chevron-sm drawer__chevron" aria-hidden="true"><use href="#i-chevron-sm"></use></svg></a></li><li><a class="drawer__link" href="catalog.html">Стайлінг<svg class="icon icon--chevron-sm drawer__chevron" aria-hidden="true"><use href="#i-chevron-sm"></use></svg></a></li><li><a class="drawer__link" href="catalog.html">Техніка<svg class="icon icon--chevron-sm drawer__chevron" aria-hidden="true"><use href="#i-chevron-sm"></use></svg></a></li><li><a class="drawer__link" href="#">Для майстрів<svg class="icon icon--chevron-sm drawer__chevron" aria-hidden="true"><use href="#i-chevron-sm"></use></svg></a></li><li><a class="drawer__link" href="catalog.html">Бренди<svg class="icon icon--chevron-sm drawer__chevron" aria-hidden="true"><use href="#i-chevron-sm"></use></svg></a></li><li><a class="drawer__link drawer__link--sale" href="catalog.html">Акції<svg class="icon icon--chevron-sm drawer__chevron" aria-hidden="true"><use href="#i-chevron-sm"></use></svg></a></li><li><a class="drawer__link" href="#">Навчання та гайди<svg class="icon icon--chevron-sm drawer__chevron" aria-hidden="true"><use href="#i-chevron-sm"></use></svg></a></li><li><a class="drawer__link" href="catalog.html">Подарункові сертифікати<svg class="icon icon--chevron-sm drawer__chevron" aria-hidden="true"><use href="#i-chevron-sm"></use></svg></a></li></ul>
     </nav>
     <ul class="drawer__service">
-      <li><a href="account.html"><svg class="icon icon--user" aria-hidden="true"><use href="#i-user"></use></svg>Кабінет</a></li>
+      <li><a href="account.html" data-auth-open><svg class="icon icon--user" aria-hidden="true"><use href="#i-user"></use></svg>Кабінет</a></li>
       <li><a href="#"><svg class="icon icon--heart" aria-hidden="true"><use href="#i-heart"></use></svg>Обране</a></li>
       <li><a href="#"><svg class="icon icon--master" aria-hidden="true"><use href="#i-master"></use></svg>Для майстрів</a></li>
       <li><a href="tel:+380672545645"><svg class="icon icon--phone" aria-hidden="true"><use href="#i-phone"></use></svg>+38 (067) 254 56 45</a></li>
@@ -258,6 +258,43 @@
     </div>
   </footer>
 
+
+  <!-- ============ ВХІД / РЕЄСТРАЦІЯ ============ -->
+  <dialog class="auth" id="auth" aria-label="Вхід і реєстрація" data-auth>
+    <button class="auth__close" type="button" aria-label="Закрити" data-auth-close><svg class="icon icon--close" aria-hidden="true"><use href="#i-close"></use></svg></button>
+    <div class="auth__tabs" role="tablist" aria-label="Вхід або реєстрація">
+      <button class="auth__tab is-active" type="button" role="tab" id="auth-tab-login" aria-controls="auth-login" aria-selected="true" data-auth-tab="login">Увійти</button>
+      <button class="auth__tab" type="button" role="tab" id="auth-tab-register" aria-controls="auth-register" aria-selected="false" tabindex="-1" data-auth-tab="register">Реєстрація</button>
+    </div>
+
+    <form class="auth__panel" id="auth-login" role="tabpanel" aria-labelledby="auth-tab-login" data-auth-form="login" novalidate>
+      <label class="field"><span class="visually-hidden">E-mail або телефон</span><input type="text" name="login" placeholder="E-mail або телефон" autocomplete="username" required></label>
+      <label class="field"><span class="visually-hidden">Пароль</span><input type="password" name="password" placeholder="Пароль" autocomplete="current-password" required></label>
+      <div class="auth__row">
+        <label class="check auth__check"><input type="checkbox" name="remember" checked><span class="check__box"><svg class="icon icon--checkmark" aria-hidden="true"><use href="#i-checkmark"></use></svg></span><span class="check__label">Запам'ятати мене</span></label>
+        <a class="auth__link" href="#">Забули пароль?</a>
+      </div>
+      <button class="btn btn--soft btn--block" type="submit">Увійти</button>
+    </form>
+
+    <form class="auth__panel" id="auth-register" role="tabpanel" aria-labelledby="auth-tab-register" data-auth-form="register" novalidate hidden>
+      <label class="field"><span class="visually-hidden">Ім’я</span><input type="text" name="first_name" placeholder="Ім’я" autocomplete="given-name" required></label>
+      <label class="field"><span class="visually-hidden">Прізвище</span><input type="text" name="last_name" placeholder="Прізвище" autocomplete="family-name" required></label>
+      <label class="field"><span class="visually-hidden">Телефон</span><input type="tel" name="phone" placeholder="Телефон" autocomplete="tel" inputmode="tel" required pattern="[+0-9 \(\)\-]{10,19}" data-phone></label>
+      <label class="field"><span class="visually-hidden">E-mail</span><input type="email" name="email" placeholder="E-mail" autocomplete="email" required></label>
+      <label class="field"><span class="visually-hidden">Пароль</span><input type="password" name="password" placeholder="Пароль" autocomplete="new-password" minlength="6" required></label>
+      <div class="auth__row">
+        <label class="check auth__check auth__check--agree"><input type="checkbox" name="agree" required><span class="check__box"><svg class="icon icon--checkmark" aria-hidden="true"><use href="#i-checkmark"></use></svg></span><span class="check__label">Погоджуюсь з умовами та політикою конфіденційності</span></label>
+      </div>
+      <button class="btn btn--soft btn--block" type="submit">Створити акаунт</button>
+    </form>
+
+    <div class="auth__promo">
+      <p class="auth__promo-title">Ви майстер або студія?</p>
+      <p class="auth__promo-text">Зареєструйтесь як клієнт, а потім пройдіть верифікацію — і відкрийте спеціальні умови, реферальну програму та бонуси.</p>
+      <a class="btn btn--white auth__promo-btn" href="#">Верифікація<svg class="icon icon--arrow-ur" aria-hidden="true"><use href="#i-arrow-ur"></use></svg></a>
+    </div>
+  </dialog>
   <script src="assets/js/main.js" defer></script>
 </body>
 </html>

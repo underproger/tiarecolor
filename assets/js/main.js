@@ -1268,4 +1268,84 @@
       });
     }
   }
+  /* ==========================================================================
+     ВХІД / РЕЄСТРАЦІЯ
+     Відкривається з будь-якого [data-auth-open] (значення "register" — одразу вкладка реєстрації).
+     У кабінеті (користувач уже увійшов) посилання працюють як звичайні.
+     ========================================================================== */
+  var auth = $('[data-auth]');
+  if (auth && typeof auth.showModal === 'function' && !document.body.classList.contains('page-account')) {
+    var tabs = $$('[data-auth-tab]', auth);
+    var setTab = function (name, focus) {
+      tabs.forEach(function (t) {
+        var on = t.getAttribute('data-auth-tab') === name;
+        t.classList.toggle('is-active', on);
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        $('#' + t.getAttribute('aria-controls')).hidden = !on;
+        if (on && focus) t.focus();
+      });
+    };
+    var openAuth = function (tab) {
+      if ($('[data-drawer]') && !$('[data-drawer]').hidden) closeDrawer();
+      setTab(tab === 'register' ? 'register' : 'login');
+      document.documentElement.classList.add('has-modal');
+      auth.showModal();
+      var first = $('.auth__panel:not([hidden]) input', auth);
+      if (first) first.focus();
+    };
+    var closeAuth = function () { auth.close(); };
+
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest('[data-auth-open]');
+      if (!a) return;
+      e.preventDefault();
+      openAuth(a.getAttribute('data-auth-open'));
+    });
+    auth.addEventListener('close', function () { document.documentElement.classList.remove('has-modal'); });
+    $$('[data-auth-close]', auth).forEach(function (b) { b.addEventListener('click', closeAuth); });
+    // клік по затемненню поза вікном
+    auth.addEventListener('click', function (e) {
+      if (e.target !== auth) return;
+      var r = auth.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) closeAuth();
+    });
+    // вкладки: клік і стрілки
+    tabs.forEach(function (t, i) {
+      t.addEventListener('click', function () { setTab(t.getAttribute('data-auth-tab')); });
+      t.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        e.preventDefault();
+        var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+        setTab(n.getAttribute('data-auth-tab'), true);
+      });
+    });
+    // телефон: код країни
+    $$('[data-phone]', auth).forEach(function (i) {
+      i.addEventListener('focus', function () { if (!i.value) i.value = '+38 '; });
+      i.addEventListener('blur', function () { if (i.value.trim() === '+38') i.value = ''; });
+      i.addEventListener('input', function () {
+        var v = i.value.replace(/^\+38\s*\+?38\s*/, '+38 ').replace(/\s{2,}/g, ' ');
+        if (v !== i.value) i.value = v;
+      });
+    });
+    $$('[data-auth-form]', auth).forEach(function (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!form.checkValidity()) {
+          form.classList.add('was-validated');
+          var bad = $(':invalid', form);
+          if (bad) { bad.focus(); bad.reportValidity(); }
+          return;
+        }
+        // TODO: вхід / реєстрація на бекенді; поки — перехід у кабінет
+        var btn = $('button[type="submit"]', form);
+        btn.classList.add('is-done');
+        btn.textContent = form.getAttribute('data-auth-form') === 'login' ? 'Вхід…' : 'Акаунт створено';
+        setTimeout(function () { window.location.href = 'account.html'; }, 600);
+      });
+    });
+    // TODO: сторінка / крок відновлення пароля (макета немає)
+    $$('.auth__link', auth).forEach(function (l) { l.addEventListener('click', function (e) { e.preventDefault(); }); });
+  }
 })();
