@@ -238,4 +238,172 @@
       sub.reset();
     });
   }
+  /* ==========================================================================
+     КАРТКА ТОВАРУ
+     ========================================================================== */
+
+  /* ---------- Галерея ---------- */
+  $$('[data-gallery]').forEach(function (g) {
+    var main = $('[data-gallery-main]', g);
+    var thumbs = $$('[data-gallery-thumb]', g);
+    function show(btn) {
+      if (!main || btn.classList.contains('is-active')) return;
+      thumbs.forEach(function (t) { t.classList.remove('is-active'); t.removeAttribute('aria-current'); });
+      btn.classList.add('is-active');
+      btn.setAttribute('aria-current', 'true');
+      main.classList.add('is-fading');
+      setTimeout(function () {
+        main.src = btn.getAttribute('data-full');
+        main.classList.remove('is-fading');
+      }, reduceMotion ? 0 : 180);
+    }
+    thumbs.forEach(function (t) { t.addEventListener('click', function () { show(t); }); });
+    // свайп по головному фото
+    var x0 = null;
+    main && main.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+    main && main.addEventListener('touchend', function (e) {
+      if (x0 === null) return;
+      var dx = e.changedTouches[0].clientX - x0; x0 = null;
+      if (Math.abs(dx) < 40) return;
+      var i = thumbs.findIndex(function (t) { return t.classList.contains('is-active'); });
+      var n = (i + (dx < 0 ? 1 : -1) + thumbs.length) % thumbs.length;
+      show(thumbs[n]);
+    });
+  });
+
+  /* ---------- Вибір відтінку (дропдаун + плашки) ---------- */
+  $$('[data-shade-select]').forEach(function (box) {
+    var form = box.closest('form') || document;
+    var btn = $('[data-shade-toggle]', box);
+    var list = $('[data-shade-list]', box);
+    var options = $$('[role="option"]', list);
+    var swatches = $$('.swatch[data-shade]', form);
+    var more = $('[data-shade-more]', form);
+    var focusIdx = 0;
+
+    function open(state) {
+      list.hidden = !state;
+      btn.setAttribute('aria-expanded', String(state));
+      if (state) {
+        focusIdx = Math.max(0, options.findIndex(function (o) { return o.classList.contains('is-selected'); }));
+        markFocus();
+        list.focus();
+      }
+    }
+    function markFocus() {
+      options.forEach(function (o, k) { o.classList.toggle('is-focused', k === focusIdx); });
+      list.setAttribute('aria-activedescendant', options[focusIdx].id);
+      options[focusIdx].scrollIntoView({ block: 'nearest' });
+    }
+    function select(i) {
+      var o = options[i]; if (!o) return;
+      options.forEach(function (x, k) {
+        x.classList.toggle('is-selected', k === i);
+        x.setAttribute('aria-selected', k === i ? 'true' : 'false');
+      });
+      swatches.forEach(function (s) {
+        var on = +s.getAttribute('data-shade') === i;
+        s.classList.toggle('is-active', on);
+        s.setAttribute('aria-pressed', String(on));
+      });
+      $$('[data-shade-name]', form).forEach(function (el) { el.textContent = o.getAttribute('data-name'); });
+      var price = $('[data-shade-price]', box); if (price) price.textContent = o.getAttribute('data-price') + ' грн';
+      var img = $('[data-shade-img]', box); if (img) img.src = o.getAttribute('data-img');
+    }
+
+    btn.addEventListener('click', function () { open(list.hidden); });
+    options.forEach(function (o, k) {
+      o.addEventListener('click', function () { select(k); open(false); btn.focus(); });
+    });
+    list.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); focusIdx = Math.min(options.length - 1, focusIdx + 1); markFocus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); focusIdx = Math.max(0, focusIdx - 1); markFocus(); }
+      else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(focusIdx); open(false); btn.focus(); }
+      else if (e.key === 'Escape' || e.key === 'Tab') { open(false); if (e.key === 'Escape') btn.focus(); }
+    });
+    document.addEventListener('click', function (e) { if (!box.contains(e.target) && e.target !== more) open(false); });
+    swatches.forEach(function (s) { s.addEventListener('click', function () { select(+s.getAttribute('data-shade')); }); });
+    more && more.addEventListener('click', function () { open(true); });
+  });
+
+  /* ---------- Кількість ---------- */
+  $$('[data-qty]').forEach(function (q) {
+    var input = $('input', q);
+    var min = +input.min || 1, max = +input.max || 999;
+    function set(v) { input.value = Math.max(min, Math.min(max, v || min)); }
+    $('[data-qty-minus]', q).addEventListener('click', function () { set(+input.value - 1); });
+    $('[data-qty-plus]', q).addEventListener('click', function () { set(+input.value + 1); });
+    input.addEventListener('change', function () { set(parseInt(input.value, 10)); });
+  });
+
+  /* ---------- Купити / обране на картці товару ---------- */
+  var productForm = $('[data-product-form]');
+  if (productForm) {
+    productForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      // TODO: додавання в кошик через API CMS (FormData(productForm))
+      var b = $('.btn-cart', productForm), label = $('span', b), old = label.textContent;
+      b.classList.add('is-added'); label.textContent = 'Додано';
+      setTimeout(function () { b.classList.remove('is-added'); label.textContent = old; }, 1600);
+    });
+  }
+  $$('[data-fav]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var on = b.getAttribute('aria-pressed') !== 'true';
+      b.setAttribute('aria-pressed', String(on));
+      b.setAttribute('aria-label', on ? 'Видалити з обраного' : 'Додати в обране');
+    });
+  });
+
+  /* ---------- Поділитися ---------- */
+  $$('[data-share]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var data = { title: document.title, url: location.href };
+      if (navigator.share) { navigator.share(data).catch(function () {}); return; }
+      var label = $('[data-share-label]', b);
+      var done = function () {
+        if (!label) return;
+        var old = label.textContent; label.textContent = 'Посилання скопійовано';
+        setTimeout(function () { label.textContent = old; }, 1800);
+      };
+      if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(done, done); else done();
+    });
+  });
+
+  /* ---------- Таби ---------- */
+  $$('[data-tabs]').forEach(function (wrap) {
+    var tabs = $$('[role="tab"]', wrap);
+    function activate(tab, focus) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.classList.toggle('is-active', on);
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        var panel = document.getElementById(t.getAttribute('aria-controls'));
+        if (panel) panel.hidden = !on;
+      });
+      if (focus) tab.focus();
+    }
+    tabs.forEach(function (t, i) {
+      t.addEventListener('click', function () { activate(t); });
+      t.addEventListener('keydown', function (e) {
+        var n = null;
+        if (e.key === 'ArrowRight') n = tabs[(i + 1) % tabs.length];
+        if (e.key === 'ArrowLeft') n = tabs[(i - 1 + tabs.length) % tabs.length];
+        if (e.key === 'Home') n = tabs[0];
+        if (e.key === 'End') n = tabs[tabs.length - 1];
+        if (n) { e.preventDefault(); activate(n, true); }
+      });
+    });
+  });
+
+  /* ---------- Відгуки: «Корисно» ---------- */
+  $$('[data-helpful]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var on = b.getAttribute('aria-pressed') !== 'true';
+      var c = $('[data-helpful-count]', b);
+      b.setAttribute('aria-pressed', String(on));
+      if (c) c.textContent = (+c.textContent) + (on ? 1 : -1);
+    });
+  });
 })();
