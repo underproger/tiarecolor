@@ -365,7 +365,7 @@
 
   $$('[data-slider]').forEach(function (s) { initSlider(s); });
 
-  $$('.insta__grid, .reviews__list, .brands__list, .gallery__thumbs').forEach(function (t) { initGrab(t); });
+  $$('.insta__grid, .reviews__list, .brands__list, .gallery__thumbs, .account-nav__list').forEach(function (t) { initGrab(t); });
 
   /* ---------- Hero ---------- */
   var hero = $('[data-hero]');
@@ -1143,5 +1143,129 @@
       var btn = document.querySelector('[data-checkout-submit]');
       if (btn) { btn.classList.add('is-done'); btn.textContent = 'Замовлення прийнято'; }
     });
+  }
+  /* ==========================================================================
+     КАБІНЕТ
+     ========================================================================== */
+  // фільтр замовлень за статусом (на проді — запит із параметром ?status=)
+  $$('[data-orders]').forEach(function (box) {
+    var rows = $$('tbody tr[data-status]', box);
+    var empty = $('[data-orders-empty]', box);
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-filter]');
+      if (!b) return;
+      var f = b.getAttribute('data-filter');
+      $$('[data-filter]', box).forEach(function (x) {
+        x.classList.toggle('is-active', x === b);
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      var shown = 0;
+      rows.forEach(function (r) {
+        var on = f === 'all' || r.getAttribute('data-status') === f;
+        r.hidden = !on;
+        if (on) shown++;
+      });
+      if (empty) empty.hidden = shown > 0;
+    });
+  });
+
+  // копіювання реферального посилання
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-copy]');
+    if (!btn) return;
+    var input = $('[data-copy-src]', btn.parentNode);
+    if (!input) return;
+    function done() {
+      var old = btn.getAttribute('data-label') || btn.textContent;
+      btn.setAttribute('data-label', old);
+      btn.textContent = 'Скопійовано';
+      btn.classList.add('is-done');
+      setTimeout(function () { btn.textContent = old; btn.classList.remove('is-done'); }, 1600);
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(input.value).then(done, function () { input.select(); document.execCommand('copy'); done(); });
+    } else {
+      input.select();
+      try { document.execCommand('copy'); } catch (err) { /* ignore */ }
+      done();
+    }
+  });
+
+  // телефон у формах кабінету — той самий код країни, що й в оформленні
+  $$('.account-page [data-phone]').forEach(function (i) {
+    i.addEventListener('focus', function () { if (!i.value) i.value = '+38 '; });
+    i.addEventListener('blur', function () { if (i.value.trim() === '+38') i.value = ''; });
+    i.addEventListener('input', function () {
+      var v = i.value.replace(/^\+38\s*\+?38\s*/, '+38 ').replace(/\s{2,}/g, ' ');
+      if (v !== i.value) i.value = v;
+    });
+  });
+
+  // форми кабінету: перевірка і відгук кнопки
+  $$('[data-acc-form]').forEach(function (form) {
+    var pw = $('[name="password"]', form), pw2 = $('[name="password2"]', form);
+    function samePw() {
+      if (pw && pw2) pw2.setCustomValidity(pw2.value && pw.value !== pw2.value ? 'Паролі не збігаються' : '');
+    }
+    if (pw && pw2) { pw.addEventListener('input', samePw); pw2.addEventListener('input', samePw); }
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      samePw();
+      if (!form.checkValidity()) {
+        form.classList.add('was-validated');
+        var bad = $(':invalid', form);
+        if (bad) { bad.focus(); bad.reportValidity(); }
+        return;
+      }
+      // TODO: збереження на бекенді
+      var btn = $('button[type="submit"]', form);
+      if (!btn) return;
+      var old = btn.textContent;
+      btn.classList.add('is-done');
+      btn.textContent = 'Збережено';
+      setTimeout(function () { btn.classList.remove('is-done'); btn.textContent = old; }, 1600);
+      if (form.hasAttribute('data-password-form')) form.reset();
+    });
+  });
+
+  // адреси доставки: основна, редагування, видалення
+  var addrBox = $('[data-addresses]');
+  if (addrBox) {
+    var addrForm = $('[data-addr-form]');
+    var syncMain = function () {
+      $$('[data-addr]', addrBox).forEach(function (card, i) {
+        var on = $('.radio', card).checked;
+        card.classList.toggle('is-main', on);
+        $('.addr-card__label', card).textContent = on ? 'Основна адреса' : 'Адреса №' + (i + 1);
+      });
+    };
+    addrBox.addEventListener('change', function (e) { if (e.target.classList.contains('radio')) syncMain(); });
+    addrBox.addEventListener('click', function (e) {
+      var card = e.target.closest('[data-addr]');
+      if (!card) return;
+      if (e.target.closest('[data-addr-edit]') && addrForm) {
+        // TODO: підставити дані вибраної адреси у форму
+        addrForm.hidden = false;
+        addrForm.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+        var first = $('input', addrForm);
+        if (first) first.focus({ preventScroll: true });
+      }
+      if (e.target.closest('[data-addr-delete]')) {
+        // TODO: видалення на бекенді
+        var wasMain = card.classList.contains('is-main');
+        card.classList.add('is-removing');
+        setTimeout(function () {
+          card.parentNode.removeChild(card);
+          var rest = $$('[data-addr]', addrBox);
+          if (wasMain && rest[0]) $('.radio', rest[0]).checked = true;
+          syncMain();
+        }, reduceMotion ? 0 : 250);
+      }
+    });
+    if (addrForm) {
+      $$('[data-addr-cancel]', addrForm).forEach(function (b) {
+        b.addEventListener('click', function () { addrForm.hidden = true; });
+      });
+    }
   }
 })();
