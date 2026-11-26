@@ -855,6 +855,243 @@
   }
 
   /* ==========================================================================
+     КАСТОМНИЙ SELECT
+     Нативний <select> лишається у формі (значення, required, disabled), поверх нього — кнопка і список.
+     Розмітка: <div class="field field--select" data-select><select aria-label="…">…</select>…</div>
+     Пошук у списку з'являється, якщо пунктів більше 7 (або є атрибут data-select-search).
+     Зміни select ззовні (value + подія change, disabled, нові <option>) підхоплюються автоматично.
+     ========================================================================== */
+  var selectUid = 0;
+  function initSelect(box) {
+    var native = $('select', box);
+    if (!native || native.customSelect) return;
+    var uid = 'cs-' + (++selectUid);
+    var label = native.getAttribute('aria-label') || '';
+    var opts = [], active = -1, typed = '', typedTimer = 0;
+
+    box.classList.add('select');
+    native.classList.add('select__native');
+    native.tabIndex = -1;
+    native.setAttribute('aria-hidden', 'true');
+
+    var btn = document.createElement('div');
+    btn.className = 'select__btn';
+    btn.setAttribute('role', 'combobox');
+    btn.setAttribute('aria-haspopup', 'listbox');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', uid + '-list');
+    btn.setAttribute('aria-label', label);
+    btn.innerHTML = '<span class="select__value"></span>';
+    var valueEl = btn.firstChild;
+
+    var panel = document.createElement('div');
+    panel.className = 'select__panel';
+    panel.hidden = true;
+    var search = null;
+    var list = document.createElement('ul');
+    list.className = 'select__list';
+    list.id = uid + '-list';
+    list.setAttribute('role', 'listbox');
+    list.setAttribute('aria-label', label);
+    var empty = document.createElement('p');
+    empty.className = 'select__empty';
+    empty.textContent = 'Нічого не знайдено';
+    empty.hidden = true;
+
+    native.insertAdjacentElement('afterend', btn);
+    box.appendChild(panel);
+
+    function realOptions() {
+      return Array.prototype.filter.call(native.options, function (o) { return !(o.hidden || (o.disabled && o.value === '')); });
+    }
+    function placeholder() {
+      var o = native.options[0];
+      return o && o.value === '' ? o.textContent : '';
+    }
+    function buildList() {
+      var real = realOptions();
+      var needSearch = native.hasAttribute('data-select-search') || real.length > 7;
+      if (needSearch && !search) {
+        var wrap = document.createElement('div');
+        wrap.className = 'select__search';
+        wrap.innerHTML = '<svg class="icon icon--search" aria-hidden="true"><use href="#i-search"></use></svg>';
+        search = document.createElement('input');
+        search.type = 'text';
+        search.autocomplete = 'off';
+        search.placeholder = 'Пошук';
+        search.setAttribute('aria-label', 'Пошук: ' + label);
+        search.setAttribute('aria-controls', list.id);
+        wrap.appendChild(search);
+        panel.insertBefore(wrap, panel.firstChild);
+        search.addEventListener('input', function () { filter(search.value); });
+        search.addEventListener('keydown', onListKey);
+      } else if (!needSearch && search) {
+        panel.removeChild(search.parentNode);
+        search = null;
+      }
+      list.innerHTML = '';
+      opts = real.map(function (o, i) {
+        var li = document.createElement('li');
+        li.className = 'select__option';
+        li.id = uid + '-o' + i;
+        li.setAttribute('role', 'option');
+        li.setAttribute('aria-selected', 'false');
+        if (o.disabled) li.setAttribute('aria-disabled', 'true');
+        li.innerHTML = '<span></span><svg class="icon icon--checkmark select__check" aria-hidden="true"><use href="#i-checkmark"></use></svg>';
+        li.firstChild.textContent = o.textContent;
+        li.addEventListener('click', function () { if (!o.disabled) { choose(o); close(true); } });
+        li.addEventListener('mousemove', function () { if (!li.hidden) setActive(opts.indexOf(item)); });
+        list.appendChild(li);
+        var item = { opt: o, el: li, text: o.textContent.toLowerCase() };
+        return item;
+      });
+      if (!list.parentNode) { panel.appendChild(list); panel.appendChild(empty); }
+      refresh();
+    }
+    function refresh() {
+      var sel = native.selectedOptions[0];
+      var has = sel && sel.value !== '' && !sel.hidden;
+      valueEl.textContent = has ? sel.textContent : placeholder();
+      btn.classList.toggle('is-placeholder', !has);
+      opts.forEach(function (it) { it.el.setAttribute('aria-selected', String(it.opt === sel)); });
+      var off = native.disabled;
+      btn.tabIndex = off ? -1 : 0;
+      btn.setAttribute('aria-disabled', String(off));
+      box.classList.toggle('is-disabled', off);
+      if (off) close();
+    }
+    function visible() { return opts.filter(function (it) { return !it.el.hidden && !it.opt.disabled; }); }
+    function setActive(i, scroll) {
+      opts.forEach(function (it) { it.el.classList.remove('is-active'); });
+      active = i;
+      var it = opts[i];
+      var owner = search || btn;
+      if (!it) { owner.removeAttribute('aria-activedescendant'); return; }
+      it.el.classList.add('is-active');
+      owner.setAttribute('aria-activedescendant', it.el.id);
+      if (scroll) {
+        var top = it.el.offsetTop, bottom = top + it.el.offsetHeight;
+        if (top < list.scrollTop) list.scrollTop = top - 6;
+        else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight + 6;
+      }
+    }
+    function move(delta) {
+      var vis = visible();
+      if (!vis.length) return;
+      var pos = vis.indexOf(opts[active]);
+      pos = pos === -1 ? (delta > 0 ? 0 : vis.length - 1) : Math.max(0, Math.min(vis.length - 1, pos + delta));
+      setActive(opts.indexOf(vis[pos]), true);
+    }
+    function filter(q) {
+      q = q.trim().toLowerCase();
+      var any = false;
+      opts.forEach(function (it) { it.el.hidden = !!q && it.text.indexOf(q) === -1; if (!it.el.hidden) any = true; });
+      empty.hidden = any;
+      var vis = visible();
+      setActive(vis.length ? opts.indexOf(vis[0]) : -1, true);
+    }
+    function choose(o) {
+      if (native.value === o.value && native.selectedOptions[0] === o) return;
+      o.selected = true;
+      native.dispatchEvent(new Event('input', { bubbles: true }));
+      native.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    function isOpen() { return !panel.hidden; }
+    function open() {
+      if (isOpen() || native.disabled) return;
+      $$('.select.is-open').forEach(function (b) { b.customSelect && b.customSelect.close(); });
+      panel.hidden = false;
+      box.classList.add('is-open');
+      btn.setAttribute('aria-expanded', 'true');
+      // знизу не вміщається: підкручуємо сторінку; якщо крутити нікуди — відкриваємо вгору
+      box.classList.remove('is-up');
+      var r = btn.getBoundingClientRect(), h = panel.offsetHeight + 16;
+      var lack = r.bottom + h - window.innerHeight;
+      if (lack > 0) {
+        var room = document.documentElement.scrollHeight - window.innerHeight - window.pageYOffset;
+        if (room >= lack && r.top - lack > 0) window.scrollBy({ top: lack, behavior: reduceMotion ? 'auto' : 'smooth' });
+        else if (r.top > h) box.classList.add('is-up');
+      }
+      if (search) { search.value = ''; filter(''); }
+      var cur = opts.findIndex(function (it) { return it.opt === native.selectedOptions[0]; });
+      if (cur === -1) cur = opts.indexOf(visible()[0]);
+      setActive(cur, false);
+      list.scrollTop = 0;
+      if (opts[cur]) setActive(cur, true);
+      if (search) search.focus({ preventScroll: true });
+    }
+    function close(focusBtn) {
+      if (!isOpen()) return;
+      panel.hidden = true;
+      box.classList.remove('is-open', 'is-up');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.removeAttribute('aria-activedescendant');
+      if (focusBtn) btn.focus({ preventScroll: true });
+    }
+
+    function onListKey(e) {
+      switch (e.key) {
+        case 'ArrowDown': e.preventDefault(); move(1); break;
+        case 'ArrowUp': e.preventDefault(); move(-1); break;
+        case 'Home': if (!search) { e.preventDefault(); move(-1e6); } break;
+        case 'End': if (!search) { e.preventDefault(); move(1e6); } break;
+        case 'PageDown': e.preventDefault(); move(5); break;
+        case 'PageUp': e.preventDefault(); move(-5); break;
+        case 'Enter':
+          e.preventDefault();
+          if (opts[active] && !opts[active].el.hidden) choose(opts[active].opt);
+          close(true);
+          break;
+        case 'Escape': e.preventDefault(); e.stopPropagation(); close(true); break;
+        case 'Tab': close(false); break;
+      }
+    }
+    btn.addEventListener('click', function () { isOpen() ? close(true) : open(); });
+    btn.addEventListener('keydown', function (e) {
+      if (native.disabled) return;
+      if (isOpen()) {
+        if (e.key === ' ') { e.preventDefault(); if (opts[active]) choose(opts[active].opt); close(true); return; }
+        onListKey(e);
+        if (e.key.length !== 1) return;
+      } else if (['ArrowDown', 'ArrowUp', 'Enter', ' '].indexOf(e.key) !== -1) {
+        e.preventDefault(); open(); return;
+      }
+      // набір з клавіатури: з пошуком — відкриваємо і друкуємо туди, без — переходимо до пункту на ці літери
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (search) {
+          e.preventDefault(); open(); search.value = e.key; filter(e.key);
+          return;
+        }
+        clearTimeout(typedTimer);
+        typed += e.key.toLowerCase();
+        typedTimer = setTimeout(function () { typed = ''; }, 600);
+        var hit = opts.filter(function (it) { return !it.opt.disabled && it.text.indexOf(typed) === 0; })[0];
+        if (hit) {
+          if (isOpen()) setActive(opts.indexOf(hit), true);
+          else choose(hit.opt);
+        }
+      }
+    });
+    document.addEventListener('pointerdown', function (e) { if (isOpen() && !box.contains(e.target)) close(false); });
+    box.addEventListener('focusout', function (e) { if (isOpen() && !box.contains(e.relatedTarget)) close(false); });
+    native.addEventListener('change', refresh);
+    if (window.MutationObserver) {
+      new MutationObserver(function (m) {
+        m.some(function (r) { return r.type === 'childList'; }) ? buildList() : refresh();
+      }).observe(native, { attributes: true, attributeFilter: ['disabled'], childList: true, subtree: true });
+    }
+    // reset форми
+    if (native.form) native.form.addEventListener('reset', function () { setTimeout(refresh, 0); });
+
+    buildList();
+    var api = { open: open, close: close, refresh: refresh, button: btn };
+    native.customSelect = api;
+    box.customSelect = api;
+    return api;
+  }
+  $$('[data-select]').forEach(initSelect);
+
+  /* ==========================================================================
      ОФОРМЛЕННЯ ЗАМОВЛЕННЯ
      ========================================================================== */
   var checkout = $('[data-checkout]');
@@ -883,13 +1120,23 @@
     $$('[data-phone]', checkout).forEach(function (i) {
       i.addEventListener('focus', function () { if (!i.value) i.value = '+38 '; });
       i.addEventListener('blur', function () { if (i.value.trim() === '+38') i.value = ''; });
+      // якщо код країни ввели ще раз або вставили номер з +38 — не дублюємо
+      i.addEventListener('input', function () {
+        var v = i.value.replace(/^\+38\s*\+?38\s*/, '+38 ').replace(/\s{2,}/g, ' ');
+        if (v !== i.value) i.value = v;
+      });
     });
     checkout.addEventListener('submit', function (e) {
       e.preventDefault();
       if (!checkout.checkValidity()) {
         $$('.co-step', checkout).forEach(function (s) { s.classList.add('was-validated'); });
         var bad = checkout.querySelector(':invalid') || document.querySelector('[form="checkout-form"]:invalid');
-        if (bad) { bad.focus(); if (bad.reportValidity) bad.reportValidity(); }
+        if (bad && bad.customSelect) {
+          // кастомний select: показуємо поле і одразу відкриваємо список
+          bad.customSelect.button.scrollIntoView({ block: 'center', behavior: 'instant' });
+          bad.customSelect.button.focus({ preventScroll: true });
+          bad.customSelect.open();
+        } else if (bad) { bad.focus(); if (bad.reportValidity) bad.reportValidity(); }
         return;
       }
       // TODO: відправка замовлення та перехід на оплату
