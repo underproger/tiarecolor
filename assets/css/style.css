@@ -803,10 +803,13 @@ h1, h2, h3, p { margin: 0; }
 .product__qty-label { display: block; margin-top: 7px; font-size: 16px; line-height: 20px; color: var(--c-gray-dark); }
 .product__buy { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
 .qty {
-  display: flex; align-items: center; flex: 0 0 108px; height: 55px; padding: 0 4px;
+  display: flex; align-items: stretch; flex: 0 0 108px; height: 55px;
   border-radius: 28px; box-shadow: inset 0 0 0 1px var(--c-gray-dark);
 }
-.qty__btn { display: grid; place-items: center; width: 32px; height: 40px; color: var(--c-gray-dark); transition: color .2s; }
+/* кнопка на всю высоту и до самого края (большая зона клика), а иконка отодвинута от края на 19px */
+.qty__btn { display: grid; place-items: center; flex: 0 0 37px; color: var(--c-gray-dark); transition: color .2s; }
+.qty__btn[data-qty-minus] { padding-left: 16px; border-radius: 28px 0 0 28px; }
+.qty__btn[data-qty-plus] { padding-right: 16px; border-radius: 0 28px 28px 0; }
 .qty__btn .icon { width: 14px; height: 14px; }
 .qty__btn .icon--minus { height: 1px; }
 .qty__btn:hover { color: var(--c-text); }
