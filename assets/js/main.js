@@ -84,41 +84,199 @@
   }
 
   /* ---------- Slider (scroll-snap + стрілки + точки) ---------- */
+  /* ---------- Перетягування мишею (grab) ---------- */
+  // Тач і тачпад прокручують стрічки нативно; тут — тягання мишею з інерцією та доводкою до картки.
+  function snapPoints(track) {
+    var tr = track.getBoundingClientRect();
+    var pad = parseFloat(getComputedStyle(track).scrollPaddingLeft) || 0;
+    var max = track.scrollWidth - track.clientWidth;
+    return Array.prototype.map.call(track.children, function (c) {
+      return Math.max(0, Math.min(max, c.getBoundingClientRect().left - tr.left + track.scrollLeft - pad));
+    });
+  }
+  function initGrab(track, hooks) {
+    hooks = hooks || {};
+    var st = null, suppress = false, freeTimer = 0;
+    function scrollable() { return track.scrollWidth > track.clientWidth + 1; }
+    function refresh() { track.classList.toggle('is-grab', scrollable()); }
+    function unfree(delay) {
+      clearTimeout(freeTimer);
+      freeTimer = setTimeout(function () { if (!st) track.classList.remove('is-free'); }, delay);
+    }
+
+    track.addEventListener('dragstart', function (e) { e.preventDefault(); });
+    track.addEventListener('pointerdown', function (e) {
+      if (e.pointerType !== 'mouse' || e.button !== 0 || !scrollable()) return;
+      if (e.target.closest('input, select, textarea')) return;
+      hooks.start && hooks.start();
+      st = {
+        id: e.pointerId, x: e.clientX, left: track.scrollLeft, moved: false, v: 0, lx: e.clientX, lt: e.timeStamp,
+        snap: getComputedStyle(track).scrollSnapType.indexOf('none') === -1
+      };
+    });
+    window.addEventListener('pointermove', function (e) {
+      if (!st || e.pointerId !== st.id) return;
+      if (!st.moved) {
+        if (Math.abs(e.clientX - st.x) < 6) return;
+        st.moved = true;
+        st.x = e.clientX; st.left = track.scrollLeft; st.lx = e.clientX; st.lt = e.timeStamp;
+        clearTimeout(freeTimer);
+        track.classList.add('is-dragging', 'is-free');
+      }
+      track.scrollLeft = st.left - (e.clientX - st.x);
+      var dt = e.timeStamp - st.lt;
+      if (dt > 0) {
+        st.v = 0.7 * ((e.clientX - st.lx) / dt) + 0.3 * st.v;
+        st.lx = e.clientX; st.lt = e.timeStamp;
+      }
+    });
+    function end(e) {
+      if (!st || e.pointerId !== st.id) return;
+      var s = st; st = null;
+      if (!s.moved) { hooks.end && hooks.end(); return; }
+      track.classList.remove('is-dragging');
+      suppress = true;
+      setTimeout(function () { suppress = false; }, 0);
+
+      var max = track.scrollWidth - track.clientWidth;
+      var cur = track.scrollLeft;
+      var v = e.timeStamp - s.lt > 100 ? 0 : s.v;       // px/мс; миша зупинилась — інерції немає
+      var x = cur - v * 220;                             // куди «докотиться» за інерцією
+      if (s.snap) {
+        var pts = snapPoints(track), best = pts[0];
+        pts.forEach(function (p) { if (Math.abs(p - x) < Math.abs(best - x)) best = p; });
+        // помітно потягнули, а доводка повертає назад — гортаємо на сусідню картку в бік руху
+        var moved = cur - s.left;
+        if (Math.abs(moved) > 40 && Math.abs(best - s.left) < 2) {
+          var dir = moved > 0 ? 1 : -1, cand = null;
+          pts.forEach(function (p) {
+            if ((p - s.left) * dir > 2 && (cand === null || Math.abs(p - s.left) < Math.abs(cand - s.left))) cand = p;
+          });
+          if (cand !== null) best = cand;
+        }
+        x = best;
+      }
+      x = Math.max(0, Math.min(max, x));
+      hooks.end && hooks.end();
+      if (Math.abs(x - cur) < 1) { unfree(0); return; }
+      track.scrollTo({ left: x, behavior: reduceMotion ? 'auto' : 'smooth' });
+      unfree(400);
+    }
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    // після перетягування клік по картці/посиланню не спрацьовує
+    track.addEventListener('click', function (e) {
+      if (suppress) { e.preventDefault(); e.stopPropagation(); suppress = false; }
+    }, true);
+    // знімаємо «вільний» режим, коли доводка закінчилась
+    track.addEventListener('scroll', function () {
+      if (!st && track.classList.contains('is-free')) unfree(140);
+    }, { passive: true });
+
+    refresh();
+    window.addEventListener('resize', refresh);
+    window.addEventListener('load', refresh);
+    return { refresh: refresh };
+  }
+
+  /* ---------- Слайдер (зациклений) ---------- */
+  // Нативна прокрутка зі scroll-snap. Для нескінченності з обох боків додаються копії карток;
+  // коли прокрутка зупиняється, позиція непомітно переноситься на ту саму картку в «оригінальному» наборі.
   function initSlider(root, opts) {
     opts = opts || {};
     var track = $(opts.track || '[data-slider-track]', root);
     var prev = $(opts.prev || '[data-slider-prev]', root);
     var next = $(opts.next || '[data-slider-next]', root);
     var dotsWrap = $(opts.dots || '[data-slider-dots]', root);
-    if (!track) return null;
+    if (!track || !track.children.length) return null;
 
-    var pages = 1;
-    var dots = [];
+    var items = Array.prototype.slice.call(track.children);
+    var N = items.length;
+    var loop = false, perPage = 1, pages = 1, dots = [];
+    var target = null, busy = false, idle = 0, raf = 0, lastW = 0;
 
-    function step() {
-      var item = track.firstElementChild;
-      if (!item) return track.clientWidth;
-      var gap = parseFloat(getComputedStyle(track).columnGap) || 0;
-      var itemW = item.getBoundingClientRect().width + gap;
-      var visible = opts.full ? 1 : Math.max(1, Math.floor((track.clientWidth - gap) / itemW));
-      return opts.full ? track.clientWidth : itemW * visible;
-    }
+    function css() { return getComputedStyle(track); }
+    function gap() { return parseFloat(css().columnGap) || 0; }
+    function pad() { return parseFloat(css().scrollPaddingLeft) || 0; }
+    function stepW() { return items[0].getBoundingClientRect().width + gap(); }
+    function period() { return N * stepW(); }
     function maxScroll() { return Math.max(0, track.scrollWidth - track.clientWidth); }
-    function current() {
-      var max = maxScroll();
-      if (max <= 1) return 0;
-      if (track.scrollLeft >= max - 2) return pages - 1;
-      return Math.round(track.scrollLeft / step());
+    // позиція прокрутки, за якої перша оригінальна картка стоїть на своєму місці
+    function base() { return items[0].getBoundingClientRect().left - track.getBoundingClientRect().left + track.scrollLeft - pad(); }
+    function vIndex() { return Math.round((track.scrollLeft - base()) / stepW()); }
+    function mod(i) { return ((i % N) + N) % N; }
+    function setLeft(x) {
+      track.style.scrollBehavior = 'auto';
+      track.scrollLeft = x;
+      track.style.scrollBehavior = '';
     }
-    function goTo(i) {
-      i = Math.max(0, Math.min(pages - 1, i));
-      var left = i === pages - 1 ? maxScroll() : i * step();
-      track.scrollTo({ left: left, behavior: reduceMotion ? 'auto' : 'smooth' });
+
+    function makeClone(el) {
+      var c = el.cloneNode(true);
+      c.setAttribute('data-clone', '');
+      c.setAttribute('aria-hidden', 'true');
+      c.removeAttribute('id');
+      $$('[id]', c).forEach(function (n) { n.removeAttribute('id'); });
+      $$('a, button, input, select, textarea, [tabindex]', c).forEach(function (n) { n.setAttribute('tabindex', '-1'); });
+      $$('h1', c).forEach(function (h) {           // h1 на сторінці має бути один
+        var h2 = document.createElement('h2');
+        h2.className = h.className;
+        h2.innerHTML = h.innerHTML;
+        h.parentNode.replaceChild(h2, h);
+      });
+      return c;
     }
+    function build() {
+      $$('[data-clone]', track).forEach(function (c) { c.parentNode.removeChild(c); });
+      perPage = opts.full ? 1 : Math.max(1, Math.floor((track.clientWidth - gap()) / stepW()));
+      loop = N > perPage;
+      if (loop) {
+        // копій стільки, щоб у будь-який бік вистачило прокрутки щонайменше на екран
+        var copies = Math.max(1, Math.ceil((track.clientWidth * 1.5 - 3 * pad()) / period()));
+        var before = document.createDocumentFragment(), after = document.createDocumentFragment();
+        for (var k = 0; k < copies; k++) {
+          items.forEach(function (el) { before.appendChild(makeClone(el)); after.appendChild(makeClone(el)); });
+        }
+        track.insertBefore(before, track.firstChild);
+        track.appendChild(after);
+      }
+      pages = loop ? Math.ceil(N / perPage) : 1;
+      root.classList.toggle('is-static', !loop);
+    }
+    // переносить позицію на еквівалентну ближче до середини стрічки; повертає зсув у періодах
+    function normalize() {
+      if (!loop) return 0;
+      var p = period(), a = (maxScroll() - p) / 2, x = track.scrollLeft, s = 0;
+      while (x + s * p < a) s++;
+      while (x + s * p >= a + p) s--;
+      if (s) setLeft(x + s * p);
+      return s;
+    }
+    function from() {
+      var s = normalize();
+      if (target !== null) target += s * N;
+      return target !== null ? target : vIndex();
+    }
+    function go(k) {
+      var sw = stepW(), pageW = perPage * sw, lead = base() + k * sw - track.scrollLeft;
+      // багато кліків поспіль: ціль утекла далеко вперед — перескакуємо ближче до неї, щоб не впертися в край стрічки
+      if (Math.abs(lead) > pageW * 1.5) {
+        setLeft(base() + k * sw - (lead > 0 ? 1 : -1) * pageW);
+        k += normalize() * N;
+      }
+      target = k;
+      track.scrollTo({ left: base() + k * sw, behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+    function step(dir) { if (loop) go(from() + dir * perPage); }
+    function goPage(pg) {
+      if (!loop) return;
+      var f = from(), k = f - mod(f) + pg * perPage;
+      if (k - f > N / 2) k -= N; else if (f - k > N / 2) k += N;
+      go(k);
+    }
+    function page() { return loop ? Math.min(pages - 1, Math.floor(mod(vIndex()) / perPage)) : 0; }
+
     function buildDots() {
-      var max = maxScroll();
-      pages = max <= 1 ? 1 : Math.ceil(max / step()) + 1;
-      if (opts.full) pages = track.children.length;
       if (!dotsWrap) return;
       dotsWrap.innerHTML = '';
       dots = [];
@@ -128,46 +286,86 @@
         b.type = 'button';
         b.className = 'dots__btn';
         b.setAttribute('aria-label', 'Сторінка ' + (i + 1));
-        b.addEventListener('click', goTo.bind(null, i));
+        b.addEventListener('click', goPage.bind(null, i));
         dotsWrap.appendChild(b);
         dots.push(b);
       }
     }
     function update() {
-      var i = current();
+      var i = page();
       dots.forEach(function (d, k) {
         d.classList.toggle('is-active', k === i);
         d.setAttribute('aria-current', k === i ? 'true' : 'false');
       });
-      if (!opts.loop) {
-        if (prev) prev.disabled = track.scrollLeft <= 2;
-        if (next) next.disabled = track.scrollLeft >= maxScroll() - 2;
-      }
+      if (prev) prev.disabled = !loop;
+      if (next) next.disabled = !loop;
       opts.onChange && opts.onChange(i);
     }
+    function settle() {
+      clearTimeout(idle);
+      if (busy) return;
+      normalize();
+      target = null;
+      update();
+    }
+    // scrollend приходить і тоді, коли анімацію перервав наступний клік, — чекаємо, поки доїдемо до цілі
+    function onScrollEnd() {
+      if (target !== null && Math.abs(track.scrollLeft - (base() + target * stepW())) > 1) return;
+      settle();
+    }
+    function rebuild(real) {
+      lastW = track.clientWidth;
+      build();
+      setLeft(loop ? base() + real * stepW() : 0);
+      target = null;
+      buildDots();
+      update();
+    }
 
-    prev && prev.addEventListener('click', function () {
-      var i = current();
-      goTo(opts.loop && i === 0 ? pages - 1 : i - 1);
-    });
-    next && next.addEventListener('click', function () {
-      var i = current();
-      goTo(opts.loop && i === pages - 1 ? 0 : i + 1);
-    });
+    prev && prev.addEventListener('click', function () { step(-1); });
+    next && next.addEventListener('click', function () { step(1); });
 
-    var raf = 0;
     track.addEventListener('scroll', function () {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(update);
+      clearTimeout(idle);
+      idle = setTimeout(settle, 150);
     }, { passive: true });
-    window.addEventListener('resize', function () { buildDots(); update(); });
+    if ('onscrollend' in window) track.addEventListener('scrollend', onScrollEnd);
+    // поки палець на стрічці — позицію не чіпаємо
+    track.addEventListener('touchstart', function () { busy = true; clearTimeout(idle); }, { passive: true });
+    ['touchend', 'touchcancel'].forEach(function (t) {
+      track.addEventListener(t, function () { busy = false; clearTimeout(idle); idle = setTimeout(settle, 150); }, { passive: true });
+    });
+    initGrab(track, {
+      start: function () { busy = true; clearTimeout(idle); normalize(); target = null; },
+      end: function () { busy = false; clearTimeout(idle); idle = setTimeout(settle, 150); }
+    });
 
-    buildDots();
-    update();
-    return { goTo: goTo, current: current, pages: function () { return pages; } };
+    var rs = 0;
+    function onResize() {
+      clearTimeout(rs);
+      rs = setTimeout(function () {
+        if (track.clientWidth === lastW) return;
+        rebuild(loop ? mod(vIndex()) : 0);
+      }, 150);
+    }
+    window.addEventListener('resize', onResize);
+    window.addEventListener('load', onResize);
+
+    rebuild(0);
+    return {
+      next: function () { step(1); },
+      prev: function () { step(-1); },
+      goTo: goPage,
+      current: page,
+      pages: function () { return pages; }
+    };
   }
 
   $$('[data-slider]').forEach(function (s) { initSlider(s); });
+
+  $$('.insta__grid, .reviews__list, .brands__list, .gallery__thumbs').forEach(function (t) { initGrab(t); });
 
   /* ---------- Hero ---------- */
   var hero = $('[data-hero]');
@@ -181,8 +379,7 @@
     var paused = false;
     function tick() {
       if (paused || document.hidden || !heroApi) return;
-      var i = heroApi.current();
-      heroApi.goTo(i >= heroApi.pages() - 1 ? 0 : i + 1);
+      heroApi.next();
     }
     if (!reduceMotion) timer = setInterval(tick, 6000);
     hero.addEventListener('mouseenter', function () { paused = true; });
@@ -258,16 +455,34 @@
       }, reduceMotion ? 0 : 180);
     }
     thumbs.forEach(function (t) { t.addEventListener('click', function () { show(t); }); });
+    function swipe(dx) {
+      if (Math.abs(dx) < 40) return;
+      var i = thumbs.findIndex(function (t) { return t.classList.contains('is-active'); });
+      show(thumbs[(i + (dx < 0 ? 1 : -1) + thumbs.length) % thumbs.length]);
+    }
+    // перетягування головного фото мишею
+    if (main) {
+      var mx = null, mid = null;
+      main.classList.add('is-swipe');
+      main.addEventListener('dragstart', function (e) { e.preventDefault(); });
+      main.addEventListener('pointerdown', function (e) {
+        if (e.pointerType !== 'mouse' || e.button !== 0) return;
+        mx = e.clientX; mid = e.pointerId;
+      });
+      window.addEventListener('pointerup', function (e) {
+        if (mx === null || e.pointerId !== mid) return;
+        var dx = e.clientX - mx; mx = null;
+        swipe(dx);
+      });
+      window.addEventListener('pointercancel', function () { mx = null; });
+    }
     // свайп по головному фото
     var x0 = null;
     main && main.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
     main && main.addEventListener('touchend', function (e) {
       if (x0 === null) return;
       var dx = e.changedTouches[0].clientX - x0; x0 = null;
-      if (Math.abs(dx) < 40) return;
-      var i = thumbs.findIndex(function (t) { return t.classList.contains('is-active'); });
-      var n = (i + (dx < 0 ? 1 : -1) + thumbs.length) % thumbs.length;
-      show(thumbs[n]);
+      swipe(dx);
     });
   });
 

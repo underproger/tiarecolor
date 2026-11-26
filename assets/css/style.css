@@ -524,6 +524,18 @@ h1, h2, h3, p { margin: 0; }
 .slider__arrow--prev:not(:disabled):hover { transform: translateX(-3px); }
 .slider__arrow--next:not(:disabled):hover { transform: translateX(3px); }
 
+/* перетягування мишею (клас ставить JS, лише коли стрічку є куди гортати) */
+.is-grab { -webkit-user-select: none; user-select: none; }
+.is-grab img, .is-grab a { -webkit-user-drag: none; }
+@media (hover: hover) and (pointer: fine) {
+  .is-grab { cursor: grab; }
+  .is-grab.is-dragging { cursor: grabbing; }
+}
+.is-dragging > * { pointer-events: none; }
+.is-free { scroll-snap-type: none !important; scroll-behavior: auto !important; }
+.gallery__main.is-swipe { -webkit-user-select: none; user-select: none; -webkit-user-drag: none; }
+@media (hover: hover) and (pointer: fine) { .gallery__main.is-swipe { cursor: grab; } .gallery__main.is-swipe:active { cursor: grabbing; } }
+
 .products-section { padding-block: 51px 60px; }
 .products-section--bordered { padding-block: 77px 66px; border-bottom: 1px solid var(--c-line); }
 .products-section--seen { padding-block: 47px 83px; }
