@@ -1132,6 +1132,8 @@ a.footer__title:hover { color: var(--c-pink-100); }
 .advantages__item { position: relative; display: flex; align-items: center; justify-content: center; gap: 16px; padding: 10px 12px; font-size: 14px; line-height: 16px; }
 .advantages__item + .advantages__item::before { content: ""; position: absolute; left: 0; top: 50%; width: 1px; height: 38px; margin-top: -19px; background: var(--c-line); }
 .advantages__item .icon { flex: 0 0 22px; width: 22px; height: 22px; color: var(--c-pink-300); }
+.advantages__link { display: inherit; align-items: inherit; gap: inherit; transition: color .2s; }
+.advantages__link:hover { color: var(--c-pink-300); }
 
 /* ==========================================================================
    CART & CHECKOUT
@@ -1805,6 +1807,50 @@ a.contacts-band__value:hover { color: var(--c-pink-300); }
 .info-steps__arrow .icon { width: 19.5px; height: 15.5px; }
 
 /* ==========================================================================
+   СИСТЕМА ЛОЯЛЬНОСТІ
+   ========================================================================== */
+.loyalty { width: calc(100% - 2 * var(--gutter)); max-width: 1070px; margin: 0 auto; padding-bottom: 100px; }
+.loy-hero { position: relative; display: flex; align-items: center; min-height: 350px; margin-top: 21px; padding: 32px 49px 36px; border-radius: var(--radius); background: #fdf3f4; overflow: hidden; isolation: isolate; }
+.loy-hero__bg, .loy-hero__bg img { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; object-position: right center; }
+.loy-hero__content { max-width: 400px; }
+.loy-hero__title { font-size: 60px; line-height: 55px; font-weight: 300; text-transform: uppercase; letter-spacing: .04em; color: var(--c-black); }
+.loy-hero__text { max-width: 370px; margin-top: 27px; font-size: 16px; line-height: 20px; color: #282828; }
+.loy-hero__btn { height: 55px; min-width: 190px; margin-top: 30px; border-radius: 28px; font-size: 13px; letter-spacing: .1em; }
+.loy-section { margin-top: 46px; }
+.loy-hero + .loy-section { margin-top: 26px; }
+.loy-title { font-size: 24px; line-height: 28px; font-weight: 600; }
+.loy-steps { margin-top: 21px; }
+.loy-step { position: relative; display: flex; flex-direction: column; align-items: center; min-height: 200px; padding: 27px 30px 30px; border-radius: var(--radius); background: var(--c-beige); text-align: center; }
+.loy-step__num { position: absolute; left: 20px; top: 20px; width: 40px; margin: 0; }
+.loy-step .icon { color: var(--c-pink-300); }
+.icon--loy-piggy { width: 40px; height: 39px; }
+.icon--loy-wallet { width: 39.6px; height: 41.7px; margin-top: -4px; }
+.icon--loy-userplus { width: 45px; height: 37.5px; }
+.loy-step__title { margin-top: 18px; font-size: 16px; line-height: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.loy-step p { max-width: 215px; margin-top: 7px; font-size: 14px; line-height: 16px; }
+.loy-levels { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 30px; margin: 21px 0 0; padding: 0; list-style: none; }
+.loy-level { display: flex; flex-direction: column; align-items: center; min-height: 200px; padding: 26px 10px 20px; border-radius: var(--radius); text-align: center; }
+.loy-level--1 { background: #fcf6f6; }
+.loy-level--2 { background: #fcedee; }
+.loy-level--3 { background: #fce6e8; }
+.loy-level--4 { background: #fbd8dd; }
+.loy-level--5 { background: #fac7cc; }
+.loy-level__name { padding-bottom: 9px; font-size: 20px; line-height: 24px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; background: linear-gradient(var(--c-pink-300), var(--c-pink-300)) center bottom / 63px 1px no-repeat; }
+.loy-level__range { margin-top: 8px; font-size: 14px; line-height: 16px; }
+.loy-level__pct { display: flex; flex-direction: column; align-items: center; margin-top: 22px; font-size: 45px; line-height: 42px; font-weight: 600; color: #be2143; }
+.loy-level__pct span { margin-top: 2px; font-size: 16px; line-height: 18px; color: var(--c-text); }
+.loy-lead { margin-top: 10px; font-size: 18px; line-height: 22px; }
+.loy-terms { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 21px 0 0; padding: 0; list-style: none; background: var(--c-beige); }
+.loy-term { padding: 26px 20px 30px 45px; }
+.loy-term + .loy-term { border-left: 1px solid var(--c-line); }
+.loy-term .icon { display: block; color: var(--c-pink-300); }
+.icon--loy-coins, .icon--loy-alert { width: 29px; height: 29px; }
+.icon--loy-calendar { width: 28px; height: 28.7px; }
+.icon--loy-gift { width: 24.5px; height: 28px; }
+.loy-term__title { margin-top: 17px; font-size: 18px; line-height: 22px; font-weight: 600; }
+.loy-term p { margin-top: 10px; font-size: 14px; line-height: 16px; }
+
+/* ==========================================================================
    RESPONSIVE
    ========================================================================== */
 @media (max-width: 1360px) {
@@ -2412,6 +2458,45 @@ a.contacts-band__value:hover { color: var(--c-pink-300); }
   .info-split__logo { order: -1; width: 180px; }
   .info-subtitle { font-size: 16px; }
   .info-split p + .info-subtitle { margin-top: 20px; }
+}
+
+/* ---- Система лояльності: адаптив ---- */
+@media (max-width: 1180px) {
+  .loy-hero::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, #fdf3f4 0, rgba(253, 243, 244, .9) 38%, rgba(253, 243, 244, 0) 62%); }
+  .loy-levels { gap: 16px; }
+  .loy-level__name { font-size: 17px; }
+  .loy-level__range { font-size: 13px; }
+}
+@media (max-width: 1023px) {
+  .loy-hero__title { font-size: 46px; line-height: 44px; }
+  .loy-hero__content { max-width: 330px; }
+  .loy-steps .loy-step { min-height: 0; }
+  .loy-levels { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .loy-terms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .loy-term:nth-child(3) { border-left: 0; }
+  .loy-term:nth-child(n + 3) { border-top: 1px solid var(--c-line); }
+}
+@media (max-width: 767px) {
+  .loyalty { padding-bottom: 56px; }
+  .loy-hero { flex-direction: column; align-items: stretch; min-height: 0; margin-top: 16px; padding: 210px 20px 24px; background: #fdf3f4; }
+  .loy-hero::after { display: none; }
+  .loy-hero__bg, .loy-hero__bg img { bottom: auto; height: 200px; object-position: center; }
+  .loy-hero__title { font-size: 34px; line-height: 34px; }
+  .loy-hero__text { margin-top: 14px; font-size: 15px; }
+  .loy-hero__btn { margin-top: 18px; }
+  .loy-section { margin-top: 36px; }
+  .loy-title { font-size: 20px; line-height: 24px; }
+  .loy-steps { margin-top: 14px; }
+  .loy-step { padding: 20px 20px 22px; }
+  .loy-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+  .loy-level { min-height: 0; padding: 20px 8px 18px; }
+  .loy-level--5 { grid-column: 1 / -1; }
+  .loy-level__pct { margin-top: 14px; font-size: 36px; line-height: 36px; }
+  .loy-lead { font-size: 15px; line-height: 20px; }
+  .loy-terms { grid-template-columns: minmax(0, 1fr); margin-top: 14px; }
+  .loy-term, .loy-term:nth-child(n + 2) { padding: 20px; border-left: 0; border-top: 1px solid var(--c-line); }
+  .loy-term:first-child { border-top: 0; }
+  .loy-term__title { margin-top: 10px; font-size: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
