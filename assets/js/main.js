@@ -1192,7 +1192,7 @@
   });
 
   // телефон у формах кабінету — той самий код країни, що й в оформленні
-  $$('.account-page [data-phone], .contacts-page [data-phone]').forEach(function (i) {
+  $$('.account-page [data-phone], .contacts-page [data-phone], .verify-page [data-phone]').forEach(function (i) {
     i.addEventListener('focus', function () { if (!i.value) i.value = '+38 '; });
     i.addEventListener('blur', function () { if (i.value.trim() === '+38') i.value = ''; });
     i.addEventListener('input', function () {
@@ -1361,4 +1361,88 @@
       if (empty) empty.hidden = shown > 0;
     });
   });
+  /* ---------- Верифікація майстра ---------- */
+  var vForm = $('[data-verify]');
+  if (vForm) {
+    var dz = $('[data-dropzone]', vForm);
+    var fileInput = $('.dropzone__input', dz);
+    var zone = $('.dropzone', dz);
+    var list = $('.dropzone__files', dz);
+    var errBox = $('.dropzone__error', dz);
+    var MAX_SIZE = 10 * 1024 * 1024, MAX_FILES = 5;
+    var OK_TYPE = /\.(jpe?g|png|pdf)$/i;
+    var store = [];
+    var canSet = typeof DataTransfer === 'function';
+
+    var fmtSize = function (b) {
+      return b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' МБ' : Math.max(1, Math.round(b / 1024)) + ' КБ';
+    };
+    var esc = function (t) {
+      return t.replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; });
+    };
+    var syncFiles = function () {
+      if (canSet) {
+        try {
+          var dt = new DataTransfer();
+          store.forEach(function (f) { dt.items.add(f); });
+          fileInput.files = dt.files;
+        } catch (err) { canSet = false; }
+      }
+      list.hidden = !store.length;
+      list.innerHTML = store.map(function (f, i) {
+        return '<li class="dropzone__file"><span class="dropzone__file-name">' + esc(f.name) + '</span><span class="dropzone__file-size">' + fmtSize(f.size) + '</span>' +
+          (canSet ? '<button class="dropzone__remove" type="button" data-remove="' + i + '" aria-label="Видалити ' + esc(f.name) + '"><svg class="icon" aria-hidden="true"><use href="#i-x-small"></use></svg></button>' : '') + '</li>';
+      }).join('');
+      zone.classList.remove('is-invalid');
+    };
+    var showError = function (msg) {
+      errBox.textContent = msg || '';
+      errBox.hidden = !msg;
+    };
+
+    fileInput.addEventListener('change', function () {
+      var picked = Array.prototype.slice.call(fileInput.files);
+      if (!canSet) store = [];
+      var errors = [];
+      picked.forEach(function (f) {
+        if (!OK_TYPE.test(f.name)) { errors.push('«' + f.name + '» — непідтримуваний формат'); return; }
+        if (f.size > MAX_SIZE) { errors.push('«' + f.name + '» — більше 10 МБ'); return; }
+        if (store.some(function (s) { return s.name === f.name && s.size === f.size; })) return;
+        if (store.length >= MAX_FILES) { errors.push('Не більше ' + MAX_FILES + ' файлів'); return; }
+        store.push(f);
+      });
+      showError(errors.filter(function (e, i, a) { return a.indexOf(e) === i; }).join('. '));
+      syncFiles();
+    });
+    list.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-remove]');
+      if (!btn) return;
+      store.splice(+btn.getAttribute('data-remove'), 1);
+      syncFiles();
+      showError('');
+      fileInput.focus();
+    });
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      zone.addEventListener(ev, function () { zone.classList.add('is-over'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      zone.addEventListener(ev, function () { zone.classList.remove('is-over'); });
+    });
+
+    vForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!vForm.checkValidity()) {
+        vForm.classList.add('was-validated');
+        if (!fileInput.files.length) zone.classList.add('is-invalid');
+        var bad = $(':invalid', vForm);
+        if (bad) { bad.focus(); bad.reportValidity(); }
+        return;
+      }
+      // TODO: відправка заявки на бекенд (FormData з файлами), після успіху — у кабінет на сторінку статусу
+      var btn = $('.vf-form__submit', vForm);
+      btn.disabled = true;
+      btn.textContent = 'Надсилаємо…';
+      setTimeout(function () { window.location.href = vForm.getAttribute('action'); }, 500);
+    });
+  }
 })();
