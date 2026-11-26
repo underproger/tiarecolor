@@ -1656,6 +1656,38 @@ h1, h2, h3, p { margin: 0; }
 html.has-modal { overflow: hidden; }
 
 /* ==========================================================================
+   ПРО КОМПАНІЮ
+   ========================================================================== */
+.about { width: calc(100% - 2 * var(--gutter)); max-width: 1070px; margin: 0 auto; }
+.about-head { margin-top: 17px; text-align: center; }
+.about-head__eyebrow { font-size: 12px; line-height: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--c-pink-300); }
+.about-head__title { margin-top: 11px; font-size: 30px; line-height: 34px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.about-hero { display: block; width: 100%; height: auto; aspect-ratio: 1070 / 350; margin-top: 28px; border-radius: var(--radius); object-fit: cover; }
+.about-intro { margin-top: 46px; font-size: 18px; line-height: 24px; }
+.about-intro__title { margin-bottom: 28px; font-size: 24px; line-height: 26px; font-weight: 600; text-align: center; }
+.about-intro p + p { margin-top: 15px; }
+.about-stats {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 50px; margin-top: 79px; padding: 50px;
+  background: var(--c-beige);
+}
+.about-stats__img { display: block; width: 100%; height: 167px; object-fit: cover; }
+.about-stat { display: flex; flex-direction: column; justify-content: flex-end; min-height: 167px; padding-bottom: 36px; border-bottom: 2px solid var(--c-pink-300); }
+.about-stat__value { font-size: 90px; line-height: 78px; font-weight: 300; color: var(--c-pink-300); letter-spacing: -.02em; white-space: nowrap; }
+.about-stat--lg .about-stat__value { font-size: 100px; line-height: 86px; }
+.about-stat__label { margin-top: 18px; font-size: 18px; line-height: 24px; }
+.about-story { display: grid; grid-template-columns: 330px minmax(0, 320px) minmax(0, 1fr); column-gap: 30px; align-items: start; margin-top: 80px; }
+.about-story__img { display: block; width: 100%; height: auto; object-fit: cover; }
+.about-story__img--tall { aspect-ratio: 330 / 427; }
+.about-story__img--wide { align-self: end; justify-self: end; max-width: 330px; aspect-ratio: 330 / 218; }
+.about-story__text { font-size: 18px; line-height: 24px; }
+.about-story__btn { height: 55px; min-width: 220px; margin-top: 19px; border-radius: 28px; font-size: 13px; letter-spacing: .1em; }
+.about-mission {
+  max-width: 680px; margin: 80px auto 0; font-size: 16px; line-height: 24px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .02em; text-align: center;
+}
+.about-advantages { margin-top: 73px; }
+
+/* ==========================================================================
    RESPONSIVE
    ========================================================================== */
 @media (max-width: 1360px) {
@@ -2175,6 +2207,40 @@ html.has-modal { overflow: hidden; }
   .auth__panel { gap: 12px; margin-top: 22px; }
   .auth__promo { margin-top: 22px; padding: 18px 16px 20px; }
   .auth__promo-text { line-height: 16px; }
+}
+
+/* ---- Про компанію: адаптив ---- */
+@media (max-width: 1180px) {
+  .about-stats { gap: 20px 30px; padding: 40px; }
+  .about-stat__value { font-size: 72px; line-height: 64px; }
+  .about-stat--lg .about-stat__value { font-size: 80px; line-height: 70px; }
+  .about-story { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 30px; }
+}
+@media (max-width: 1023px) {
+  .about-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 56px; }
+  .about-story { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-top: 56px; }
+  .about-story__text { grid-column: 2; grid-row: 1; align-self: center; }
+  .about-story__img--wide { grid-column: 1 / -1; justify-self: stretch; max-width: none; aspect-ratio: 16 / 7; }
+  .about-mission { margin-top: 56px; }
+  .about-advantages { margin-top: 56px; }
+}
+@media (max-width: 767px) {
+  .about-head__title { font-size: 22px; line-height: 26px; }
+  .about-hero { aspect-ratio: 4 / 3; margin-top: 20px; }
+  .about-intro { margin-top: 32px; font-size: 16px; line-height: 22px; }
+  .about-intro__title { margin-bottom: 16px; font-size: 20px; line-height: 24px; }
+  .about-stats { grid-template-columns: minmax(0, 1fr); gap: 16px; margin: 40px calc(-1 * var(--gutter)) 0; padding: 32px var(--gutter); }
+  .about-stat { min-height: 0; padding: 8px 0 20px; }
+  .about-stat__value, .about-stat--lg .about-stat__value { font-size: 64px; line-height: 58px; }
+  .about-stat__label { margin-top: 10px; font-size: 16px; }
+  .about-stats__img { height: auto; aspect-ratio: 290 / 167; }
+  .about-story { grid-template-columns: minmax(0, 1fr); gap: 20px; margin-top: 40px; }
+  .about-story__text { grid-column: auto; grid-row: auto; font-size: 16px; line-height: 22px; }
+  .about-story__img--tall { aspect-ratio: 4 / 3; }
+  .about-story__img--wide { grid-column: auto; aspect-ratio: 330 / 218; }
+  .about-story__btn { width: 100%; }
+  .about-mission { margin-top: 40px; font-size: 14px; line-height: 21px; }
+  .about-advantages { margin-top: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
