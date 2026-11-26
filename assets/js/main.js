@@ -1329,20 +1329,12 @@
         if (v !== i.value) i.value = v;
       });
     });
+    // поки без бекенда: «Увійти» і «Створити акаунт» одразу ведуть у кабінет.
+    // TODO: вхід / реєстрація на бекенді (перевірка полів — form.checkValidity(), стилі .was-validated вже є)
     $$('[data-auth-form]', auth).forEach(function (form) {
       form.addEventListener('submit', function (e) {
         e.preventDefault();
-        if (!form.checkValidity()) {
-          form.classList.add('was-validated');
-          var bad = $(':invalid', form);
-          if (bad) { bad.focus(); bad.reportValidity(); }
-          return;
-        }
-        // TODO: вхід / реєстрація на бекенді; поки — перехід у кабінет
-        var btn = $('button[type="submit"]', form);
-        btn.classList.add('is-done');
-        btn.textContent = form.getAttribute('data-auth-form') === 'login' ? 'Вхід…' : 'Акаунт створено';
-        setTimeout(function () { window.location.href = 'account.html'; }, 600);
+        window.location.href = 'account.html';
       });
     });
     // TODO: сторінка / крок відновлення пароля (макета немає)
