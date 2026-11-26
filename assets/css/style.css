@@ -617,9 +617,10 @@ h1, h2, h3, p { margin: 0; }
   transition: background-color .2s;
 }
 .insta__tag:hover { background: var(--c-pink-300); }
-.insta__grid { display: flex; gap: 15px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
+.insta__grid { display: flex; align-items: flex-start; gap: 15px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
 .insta__grid::-webkit-scrollbar { display: none; }
-.insta__item { flex: 0 0 202px; height: 252px; overflow: hidden; scroll-snap-align: start; }
+/* до 1504px стрічка ширша за екран (як у макеті); ширше — фото розтягуються до країв, пропорція 202×252 зберігається */
+.insta__item { flex: 1 0 202px; aspect-ratio: 202 / 252; overflow: hidden; scroll-snap-align: start; }
 .insta__item img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s var(--ease); }
 .insta__item:hover img { transform: scale(1.05); }
 
@@ -1496,7 +1497,7 @@ h1, h2, h3, p { margin: 0; }
   .review-card__text { font-size: 14px; line-height: 18px; -webkit-line-clamp: 4; }
 
   .insta { padding-block: 48px 40px; }
-  .insta__item { flex-basis: 150px; height: 188px; }
+  .insta__item { flex-basis: 150px; }
 
   .seo { padding-bottom: 44px; }
   .seo__title { font-size: 20px; line-height: 24px; }
