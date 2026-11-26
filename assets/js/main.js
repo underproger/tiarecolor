@@ -1611,11 +1611,13 @@
     if (openLayer === 'cart') hideOverlay();
     miniOpener && miniOpener.focus && miniOpener.focus({ preventScroll: true });
   }
-  function addToCart(item) {
+  function addToCart(item, quiet) {
     var same = cart.filter(function (c) { return c.id === item.id; })[0];
     if (same) same.qty = Math.min(999, same.qty + item.qty);
     else cart.unshift(item);
-    saveCart(); renderBadge(true); renderMini(item.id);
+    saveCart();
+    if (quiet) return;
+    renderBadge(true); renderMini(item.id);
     openMini();
   }
   renderBadge(false);
@@ -1898,5 +1900,99 @@
       lenis.scrollTo(target, { offset: -16 });
       if (a.classList.contains('skip-link')) { target.setAttribute('tabindex', '-1'); target.focus({ preventScroll: true }); }
     });
+  }
+  /* ---------- Обране (кабінет) ----------
+     Сердечко на картці прибирає товар зі списку; «Усе в кошик» кладе всі товари в мінікошик.
+     TODO: на CMS — список і видалення через API обраного. */
+  var favPage = $('[data-fav-page]');
+  if (favPage) {
+    var favGrid = $('[data-fav-grid]', favPage), favEmpty = $('[data-fav-empty]', favPage);
+    var favCount = $('[data-fav-count]', favPage), favAll = $('[data-fav-all]', favPage);
+    var favSync = function () {
+      var n = $$('.product-card', favGrid).length;
+      favCount.textContent = '(' + n + ')';
+      favGrid.hidden = !n; favAll.hidden = !n; favEmpty.hidden = n > 0;
+    };
+    favGrid.addEventListener('click', function (e) {
+      var heart = e.target.closest('.product-card__fav');
+      if (!heart) return;
+      e.stopPropagation();   // не перемикати сердечко глобальним обробником — картку прибираємо
+      var card = heart.closest('.product-card');
+      var cards = $$('.product-card', favGrid), i = cards.indexOf(card);
+      card.classList.add('is-removing');
+      setTimeout(function () {
+        card.remove();
+        favSync();
+        var rest = $$('.product-card__fav', favGrid);
+        var next = rest[Math.min(i, rest.length - 1)] || $('.btn', favEmpty);
+        next && next.focus({ preventScroll: true });
+      }, reduceMotion ? 0 : 320);
+    });
+    favAll.addEventListener('click', function () {
+      $$('.product-card', favGrid).forEach(function (c) { addToCart(cardItem(c), true); });
+      renderBadge(true); renderMini(); openMini();
+    });
+  }
+
+  /* ---------- Анімації: поява блоків при прокрутці, лічильники ----------
+     Те, що видно одразу, не чіпаємо (там CSS-анімація входу) — без мерехтіння.
+     Групи (сітки карток, кроки, переваги) з’являються по черзі. */
+  if (!reduceMotion && 'IntersectionObserver' in window) {
+    var RV_BLOCK = ['.section-head', '.products-section .slider', '.categories', '.promo__inner', '.verify__inner', '.seo .container',
+      '.brands', '.subscribe .container', '.product-tabs', '.p-reviews .section-title', '.rating-summary', '.about-intro', '.about-story',
+      '.about-mission', '.contacts-band', '.contact-form', '.contacts-aside', '.info-section', '.vf-form', '.mp-cta', '.loy-title', '.loy-lead',
+      '.acc-card', '.discount-banner', '.otable-wrap', '.fav__empty', '.catalog-head', '.filter-pills'].join(',');
+    var RV_GROUP = ['.catalog__grid', '.advantages__list', '.reviews__list', '.insta__grid', '.about-stats', '.info-steps', '.loy-levels',
+      '.loy-terms', '.mp-perks', '.faq-list', '.p-reviews__list', '.acc-stats', '.addr-grid', '.fav__grid'].join(',');
+    var fold = window.innerHeight * 0.92;
+    var below = function (el) { var r = el.getBoundingClientRect(); return r.height > 0 && r.top > fold; };
+    var marked = [];
+    $$(RV_BLOCK + ',' + RV_GROUP).forEach(function (el) {
+      if (el.closest('[data-rv-done]') || el.closest('.rv')) return;
+      el.setAttribute('data-rv-done', '');
+      var items = el.matches(RV_GROUP) ? Array.prototype.slice.call(el.children).filter(function (c) {
+        return !c.hasAttribute('data-clone') && !c.classList.contains('info-steps__arrow');
+      }) : [el];
+      items.forEach(function (it) { if (below(it)) { it.classList.add('rv'); marked.push(it); } });
+    });
+    var rvIO = new IntersectionObserver(function (entries) {
+      var hits = entries.filter(function (en) { return en.isIntersecting; }).map(function (en) { return en.target; });
+      hits.sort(function (a, b) {
+        var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+        return (ra.top - rb.top) || (ra.left - rb.left);
+      });
+      hits.forEach(function (el, k) {
+        rvIO.unobserve(el);
+        el.style.setProperty('--rv-d', Math.min(k, 6) * 0.08 + 's');
+        el.classList.add('is-in');
+        // після появи прибираємо службові класи — повертаються «рідні» transition елемента
+        setTimeout(function () { el.classList.remove('rv', 'is-in'); el.style.removeProperty('--rv-d'); }, 1000 + Math.min(k, 6) * 80);
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    marked.forEach(function (el) { rvIO.observe(el); });
+
+    // лічильники: «500+», «1200+», «100%» набігають від нуля, коли видно
+    var counters = $$('.about-stat__value');
+    if (counters.length) {
+      var cIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (!en.isIntersecting) return;
+          cIO.unobserve(en.target);
+          var el = en.target, txt = el.textContent, m = txt.match(/\d[\d\s]*/);
+          if (!m) return;
+          var target = parseInt(m[0].replace(/\s/g, ''), 10), pre = txt.slice(0, m.index), post = txt.slice(m.index + m[0].length);
+          var t0 = null, dur = 1400;
+          el.style.minWidth = el.offsetWidth + 'px';
+          var step = function (t) {
+            if (t0 === null) t0 = t;
+            var p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+            el.textContent = pre + Math.round(target * e) + post;
+            if (p < 1) requestAnimationFrame(step); else { el.textContent = txt; el.style.minWidth = ''; }
+          };
+          requestAnimationFrame(step);
+        });
+      }, { threshold: 0.6 });
+      counters.forEach(function (el) { cIO.observe(el); });
+    }
   }
 })();
