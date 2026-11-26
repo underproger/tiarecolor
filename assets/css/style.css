@@ -865,6 +865,9 @@ a.footer__title:hover { color: var(--c-pink-100); }
 .perks__item .icon--shield { height: 17.1px; }
 .perks__item .icon--return { height: 15.6px; }
 .perks__item b { font-weight: 600; }
+.perks__link { display: flex; gap: 11px; }
+.perks__link b { transition: color .2s; }
+.perks__link:hover b { color: var(--c-pink-300); text-decoration: underline; text-underline-offset: 3px; }
 
 /* tabs */
 .product-tabs { margin-top: 71px; }
@@ -1722,6 +1725,8 @@ html.has-modal { overflow: hidden; }
 .faq-item[open] .faq-item__a { animation: faq-in .25s var(--ease); }
 @keyframes faq-in { from { opacity: 0; transform: translateY(-4px); } }
 .faq__empty { padding: 32px 0; text-align: center; color: var(--c-gray-dark); }
+.faq-item__a a { text-decoration: underline; text-underline-offset: 3px; transition: color .2s; }
+.faq-item__a a:hover { color: var(--c-pink-300); }
 
 .contacts-band { margin-top: 31px; background: var(--c-beige); }
 .contacts-band__inner { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 24px; min-height: 166px; padding: 47px calc(var(--gutter) + 35px) 52px; }
@@ -1764,6 +1769,40 @@ a.contacts-band__value:hover { color: var(--c-pink-300); }
 .contact-form__btn { width: 368px; max-width: 100%; height: 55px; margin-top: 16px; border-radius: 28px; font-size: 14px; letter-spacing: .04em; }
 .contact-form__btn.is-done { background: #00a67e; color: #fff; }
 .info-advantages { margin-top: 97px; }
+
+/* ==========================================================================
+   ТЕКСТОВІ СТОРІНКИ (доставка і оплата, обмін і повернення)
+   ========================================================================== */
+.info { width: calc(100% - 2 * var(--gutter)); max-width: 1070px; margin: 0 auto; padding-bottom: 80px; }
+.info__body { margin-top: 55px; font-size: 18px; line-height: 24px; }
+.info__body b { font-weight: 600; }
+.info__body a { text-decoration: underline; text-underline-offset: 3px; transition: color .2s; }
+.info__body a:hover { color: var(--c-pink-300); }
+.info-section + .info-section { margin-top: 50px; }
+.info-section__title { display: grid; grid-template-columns: 35px minmax(0, 1fr); align-items: center; column-gap: 15px; min-height: 35px; font-size: 24px; line-height: 28px; font-weight: 600; }
+.info-section__title .icon { justify-self: center; color: var(--c-pink-300); }
+.info-section__title + * { margin-top: 11px; }
+.icon--info-truck { width: 35px; height: 22.7px; }
+.icon--info-calendar { width: 28px; height: 28.7px; }
+.icon--info-card { width: 30.6px; height: 21.8px; }
+.icon--info-shield { width: 24.7px; height: 30.6px; }
+.icon--info-return { width: 26.5px; height: 26.5px; }
+.icon--info-ask { width: 28.1px; height: 28.2px; }
+.icon--info-xcircle { width: 28.7px; height: 28.7px; }
+.icon--info-warning { width: 29.7px; height: 26.7px; }
+.info-subtitle { font-size: 18px; line-height: 22px; font-weight: 600; }
+.info-subtitle + p { margin-top: 12px; }
+.info-split p + .info-subtitle { margin-top: 30px; }
+.info-split { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+.info-split__logo { width: 345px; height: auto; margin-right: -3px; }
+.info-steps { display: grid; grid-template-columns: minmax(0, 1fr) 85px minmax(0, 1fr) 85px minmax(0, 1fr); margin: 0; padding: 0; list-style: none; }
+.info-section--steps .info-section__title + .info-steps { margin-top: 12px; }
+.info-step { display: flex; align-items: flex-start; gap: 20px; min-height: 99px; padding: 18px 10px 18px 20px; border-radius: var(--radius); background: var(--c-beige); }
+.info-step__num { display: grid; place-items: center; flex: 0 0 40px; height: 40px; margin-top: 2px; border-radius: 50%; background: var(--c-pink-100); font-size: 20px; font-weight: 600; }
+.info-step__title { font-size: 16px; line-height: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.info-step p { margin-top: 7px; font-size: 14px; line-height: 16px; letter-spacing: -.01em; }
+.info-steps__arrow { display: grid; place-items: center; color: var(--c-pink-300); }
+.info-steps__arrow .icon { width: 19.5px; height: 15.5px; }
 
 /* ==========================================================================
    RESPONSIVE
@@ -2353,6 +2392,26 @@ a.contacts-band__value:hover { color: var(--c-pink-300); }
   .contact-form__grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .contact-form__btn { width: 100%; }
   .info-advantages { margin-top: 40px; }
+}
+
+/* ---- Текстові сторінки: адаптив ---- */
+@media (max-width: 1023px) {
+  .info-steps { grid-template-columns: minmax(0, 1fr); }
+  .info-step { min-height: 0; }
+  .info-steps__arrow { height: 30px; }
+  .info-steps__arrow .icon { transform: rotate(90deg); }
+}
+@media (max-width: 767px) {
+  .info { padding-bottom: 48px; }
+  .info__body { margin-top: 32px; font-size: 16px; line-height: 22px; }
+  .info-section + .info-section { margin-top: 34px; }
+  .info-section__title { grid-template-columns: 30px minmax(0, 1fr); column-gap: 12px; font-size: 19px; line-height: 24px; }
+  .info-section__title .icon { transform: scale(.86); }
+  .info-section__title + * { margin-top: 12px; }
+  .info-split { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .info-split__logo { order: -1; width: 180px; }
+  .info-subtitle { font-size: 16px; }
+  .info-split p + .info-subtitle { margin-top: 20px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
