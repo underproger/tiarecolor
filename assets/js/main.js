@@ -6,6 +6,27 @@
   var $$ = function (sel, ctx) { return Array.prototype.slice.call((ctx || document).querySelectorAll(sel)); };
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /* ---------- Плавна прокрутка колесом (Lenis) ----------
+     Лише для миші/тачпада і без «зменшення руху». На тачах — нативна прокрутка.
+     Внутрішні прокручувані блоки (меню, модалки, списки) Lenis не чіпає. */
+  var lenis = null;
+  if (window.Lenis && !reduceMotion && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    lenis = new window.Lenis({
+      autoRaf: true, lerp: 0.11, allowNestedScroll: true, stopInertiaOnNavigate: true,
+      prevent: function (node) { return node.matches('dialog, [data-drawer], [data-minicart], [data-mega], .select__panel, .filters'); }
+    });
+    var syncScrollLock = function () {
+      var locked = document.documentElement.classList.contains('has-modal') || document.body.classList.contains('is-locked');
+      if (locked) lenis.stop(); else lenis.start();
+    };
+    new MutationObserver(syncScrollLock).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    new MutationObserver(syncScrollLock).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }
+  function scrollToY(y) {
+    if (lenis) lenis.scrollTo(y);
+    else window.scrollTo({ top: y, behavior: reduceMotion ? 'auto' : 'smooth' });
+  }
+
   /* ---------- Overlay / scroll lock ---------- */
   var overlay = $('[data-overlay]');
   var openLayer = null; // 'mega' | 'drawer'
@@ -13,12 +34,13 @@
   function showOverlay(kind) {
     overlay.hidden = false;
     overlay.classList.toggle('is-drawer', kind === 'drawer');
+    overlay.classList.toggle('is-cart', kind === 'cart');
     document.body.classList.add('is-locked');
     openLayer = kind;
   }
   function hideOverlay() {
     overlay.hidden = true;
-    overlay.classList.remove('is-drawer');
+    overlay.classList.remove('is-drawer', 'is-cart');
     document.body.classList.remove('is-locked');
     openLayer = null;
   }
@@ -57,6 +79,7 @@
   function closeDrawer() {
     if (!drawer || drawer.hidden) return;
     drawer.hidden = true;
+    resetDrawerPanels();
     drawerOpenBtn && drawerOpenBtn.setAttribute('aria-expanded', 'false');
     if (openLayer === 'drawer') hideOverlay();
     lastFocus && lastFocus.focus && lastFocus.focus();
@@ -64,9 +87,40 @@
   drawerOpenBtn && drawerOpenBtn.addEventListener('click', openDrawer);
   $$('[data-drawer-close]').forEach(function (b) { b.addEventListener('click', closeDrawer); });
 
-  overlay && overlay.addEventListener('click', function () { setMega(false); closeDrawer(); });
+  // другий рівень бургера: панель виїжджає поверх основного списку
+  function resetDrawerPanels() {
+    $$('[data-drawer-panel]').forEach(function (p) { p.classList.remove('is-open'); p.setAttribute('inert', ''); });
+    $$('[data-drawer-sub]').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+    drawer && drawer.classList.remove('has-sub');
+  }
+  $$('[data-drawer-sub]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var panel = document.getElementById(b.getAttribute('aria-controls'));
+      if (!panel) return;
+      drawer.scrollTop = 0;
+      drawer.classList.add('has-sub');
+      panel.scrollTop = 0;
+      panel.removeAttribute('inert');
+      panel.classList.add('is-open');
+      b.setAttribute('aria-expanded', 'true');
+      var back = $('[data-drawer-back]', panel);
+      back && back.focus({ preventScroll: true });
+    });
+  });
+  $$('[data-drawer-back]').forEach(function (back) {
+    back.addEventListener('click', function () {
+      var panel = back.closest('[data-drawer-panel]');
+      var opener = $('[aria-controls="' + panel.id + '"]', drawer);
+      panel.classList.remove('is-open');
+      panel.setAttribute('inert', '');
+      drawer.classList.remove('has-sub');
+      if (opener) { opener.setAttribute('aria-expanded', 'false'); opener.focus({ preventScroll: true }); }
+    });
+  });
+
+  overlay && overlay.addEventListener('click', function () { setMega(false); closeDrawer(); closeMini(); });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { setMega(false); closeDrawer(); }
+    if (e.key === 'Escape') { setMega(false); closeDrawer(); closeMini(); }
   });
   window.addEventListener('resize', function () {
     if (window.innerWidth < 1024 && openLayer === 'mega') setMega(false);
@@ -76,10 +130,26 @@
   var searchToggle = $('[data-search-toggle]');
   var headerSearch = $('.header__search');
   if (searchToggle && headerSearch) {
+    searchToggle.setAttribute('aria-expanded', 'false');
+    var setSearch = function (open) {
+      headerSearch.classList.toggle('is-open', open);
+      searchToggle.setAttribute('aria-expanded', String(open));
+      if (open) $('input', headerSearch).focus();
+    };
     searchToggle.addEventListener('click', function (e) {
       e.preventDefault();
-      var open = headerSearch.classList.toggle('is-open');
-      if (open) $('input', headerSearch).focus();
+      setSearch(!headerSearch.classList.contains('is-open'));
+    });
+    // клік будь-де поза полем пошуку його закриває
+    document.addEventListener('click', function (e) {
+      if (!headerSearch.classList.contains('is-open')) return;
+      if (headerSearch.contains(e.target) || searchToggle.contains(e.target)) return;
+      setSearch(false);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || !headerSearch.classList.contains('is-open')) return;
+      setSearch(false);
+      searchToggle.focus();
     });
   }
 
@@ -365,7 +435,7 @@
 
   $$('[data-slider]').forEach(function (s) { initSlider(s); });
 
-  $$('.insta__grid, .reviews__list, .brands__list, .gallery__thumbs, .account-nav__list').forEach(function (t) { initGrab(t); });
+  $$('.insta__grid, .reviews__list, .brands__list, .gallery__thumbs').forEach(function (t) { initGrab(t); });
 
   /* ---------- Hero ---------- */
   var hero = $('[data-hero]');
@@ -400,7 +470,9 @@
     }
     var buy = e.target.closest('.btn-buy');
     if (buy) {
-      // TODO: інтеграція з кошиком CMS. Поки що — візуальний фідбек.
+      // TODO: інтеграція з кошиком CMS. Поки що — локальний кошик (мінікошик) і візуальний фідбек.
+      var card = buy.closest('.product-card');
+      if (card) addToCart(cardItem(card));
       buy.classList.add('is-added');
       var label = $('span', buy);
       var old = label.textContent;
@@ -560,6 +632,17 @@
     productForm.addEventListener('submit', function (e) {
       e.preventDefault();
       // TODO: додавання в кошик через API CMS (FormData(productForm))
+      var shade = ($('[data-shade-name]', productForm) || {}).textContent || '';
+      var vol = $('input[name="volume"]:checked', productForm);
+      var num = function (el) { return el ? parseInt(el.textContent.replace(/\D/g, ''), 10) || 0 : 0; };
+      addToCart({
+        id: 'fanola-colouring-cream|' + shade + '|' + (vol ? vol.value : ''),
+        brand: 'Fanola',
+        name: 'Крем-фарба Fanola Colouring Cream ' + shade.trim() + (vol ? ', ' + vol.value + ' мл' : ''),
+        price: num($('.product__current')), old: num($('.product__old s')),
+        img: ($('[data-gallery-main]') || {}).getAttribute ? $('[data-gallery-main]').getAttribute('src') : '',
+        qty: Math.max(1, parseInt(($('.qty__input', productForm) || {}).value, 10) || 1)
+      });
       var b = $('.btn-cart', productForm), label = $('span', b), old = label.textContent;
       b.classList.add('is-added'); label.textContent = 'Додано';
       setTimeout(function () { b.classList.remove('is-added'); label.textContent = old; }, 1600);
@@ -1443,6 +1526,377 @@
       btn.disabled = true;
       btn.textContent = 'Надсилаємо…';
       setTimeout(function () { window.location.href = vForm.getAttribute('action'); }, 500);
+    });
+  }
+  /* ---------- Мінікошик ----------
+     Поки без бекенда: локальний кошик у localStorage (на першому візиті — ті самі 3 товари, що й на cart.html).
+     TODO: на CMS — дані й дії з API кошика; cart.html теж рендериться з нього. */
+  var mini = $('[data-minicart]');
+  var CART_KEY = 'tc-cart', FREE_SHIP = 2000;
+  var cart = (function () {
+    try { var v = JSON.parse(localStorage.getItem(CART_KEY)); if (Array.isArray(v)) return v; } catch (err) { /* приватний режим */ }
+    return [
+      { id: 'demo-1', brand: 'Tiarecolor', name: 'Крем-фарба для волосся 100 мл, тон 7.0', price: 980, old: 0, img: 'assets/img/products/fanola-color-mask-pink.webp', qty: 1 },
+      { id: 'demo-2', brand: 'Tiarecolor', name: 'Флюїд для реконструкції волосся з маслом аргана і кератином, 60 мл', price: 1200, old: 1680, img: 'assets/img/products/rr-argan-oil.webp', qty: 1 },
+      { id: 'demo-3', brand: 'Tiarecolor', name: 'Золотиста маска для догляду за волоссям, об’єм 300 мл', price: 2500, old: 3250, img: 'assets/img/products/fanola-oro-therapy-mask.webp', qty: 1 }
+    ];
+  })();
+  var saveCart = function () { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (err) { /* ігноруємо */ } };
+  var grn = function (n) { return Math.round(n) + ' грн'; };
+  var escHtml = function (t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var cartCount = function () { return cart.reduce(function (n, it) { return n + it.qty; }, 0); };
+  var cartSum = function () { return cart.reduce(function (n, it) { return n + it.qty * it.price; }, 0); };
+  var goodsWord = function (n) {
+    var a = n % 10, b = n % 100;
+    return a === 1 && b !== 11 ? 'товар' : (a >= 2 && a <= 4 && (b < 12 || b > 14) ? 'товари' : 'товарів');
+  };
+
+  function cardItem(card) {
+    var img = $('.product-card__img', card), title = $('.product-card__title', card);
+    var num = function (el) { return el ? parseInt(el.textContent.replace(/\D/g, ''), 10) || 0 : 0; };
+    var src = img ? img.getAttribute('src') : '';
+    var name = title ? title.textContent.trim() : '';
+    return { id: src + '|' + name, brand: ($('.product-card__brand', card) || { textContent: '' }).textContent.trim(), name: name,
+      price: num($('.price__current', card)), old: num($('.price__old', card)), img: src, qty: 1 };
+  }
+  function renderBadge(bump) {
+    var n = cartCount();
+    $$('[data-cart-count]').forEach(function (b) {
+      b.hidden = !n;
+      b.textContent = n > 99 ? '99+' : n;
+      if (bump && !reduceMotion) { b.classList.remove('is-bump'); void b.offsetWidth; b.classList.add('is-bump'); }
+    });
+  }
+  function renderMini(newId) {
+    if (!mini) return;
+    var n = cartCount(), sum = cartSum(), left = FREE_SHIP - sum;
+    $('[data-minicart-count]', mini).textContent = n ? '(' + n + ')' : '';
+    $('[data-minicart-list]', mini).innerHTML = cart.map(function (it, i) {
+      var name = escHtml(it.name);
+      return '<li class="minicart__item' + (it.id === newId ? ' is-new' : '') + '">' +
+        '<a class="minicart__img" href="product.html" tabindex="-1" aria-hidden="true"><img src="' + escHtml(it.img) + '" alt="" width="64" height="64" loading="lazy"></a>' +
+        '<div><div class="minicart__brand">' + escHtml(it.brand) + '</div><a class="minicart__name" href="product.html">' + name + '</a></div>' +
+        '<div class="minicart__row"><div class="qty">' +
+          '<button class="qty__btn" type="button" data-qty-minus data-mini="minus" data-i="' + i + '" aria-label="Менше: ' + name + '"><svg class="icon icon--minus" aria-hidden="true"><use href="#i-minus"></use></svg></button>' +
+          '<input class="qty__input" type="number" inputmode="numeric" min="1" max="999" value="' + it.qty + '" data-mini="qty" data-i="' + i + '" aria-label="Кількість: ' + name + '">' +
+          '<button class="qty__btn" type="button" data-qty-plus data-mini="plus" data-i="' + i + '" aria-label="Більше: ' + name + '"><svg class="icon icon--plus" aria-hidden="true"><use href="#i-plus"></use></svg></button>' +
+        '</div><div class="minicart__price">' + grn(it.price * it.qty) + (it.old > it.price ? '<s>' + grn(it.old * it.qty) + '</s>' : '') + '</div>' +
+        '<button class="minicart__remove" type="button" data-mini="remove" data-i="' + i + '" aria-label="Видалити: ' + name + '"><svg class="icon icon--trash" aria-hidden="true"><use href="#i-trash"></use></svg></button></div></li>';
+    }).join('');
+    $('[data-minicart-list]', mini).hidden = !n;
+    $('[data-minicart-empty]', mini).hidden = !!n;
+    $('[data-minicart-foot]', mini).hidden = !n;
+    $('[data-minicart-ship]', mini).hidden = !n;
+    $('[data-minicart-total]', mini).textContent = grn(sum);
+    $('[data-minicart-ship-text]', mini).innerHTML = left > 0
+      ? 'До безкоштовної доставки залишилось <b>' + grn(left) + '</b>'
+      : 'Вам доступна <b>безкоштовна доставка</b> Новою Поштою';
+    $('[data-minicart-ship-bar]', mini).style.width = Math.min(100, sum / FREE_SHIP * 100) + '%';
+  }
+  var miniOpener = null;
+  function openMini() {
+    if (!mini) return;
+    if (!mini.hidden) return;
+    setMega(false); closeDrawer();
+    miniOpener = document.activeElement;
+    mini.hidden = false;
+    showOverlay('cart');
+    $$('[data-minicart-open]').forEach(function (a) { a.setAttribute('aria-expanded', 'true'); });
+    $('[data-minicart-close]', mini).focus({ preventScroll: true });
+  }
+  function closeMini() {
+    if (!mini || mini.hidden) return;
+    mini.hidden = true;
+    $$('[data-minicart-open]').forEach(function (a) { a.setAttribute('aria-expanded', 'false'); });
+    if (openLayer === 'cart') hideOverlay();
+    miniOpener && miniOpener.focus && miniOpener.focus({ preventScroll: true });
+  }
+  function addToCart(item) {
+    var same = cart.filter(function (c) { return c.id === item.id; })[0];
+    if (same) same.qty = Math.min(999, same.qty + item.qty);
+    else cart.unshift(item);
+    saveCart(); renderBadge(true); renderMini(item.id);
+    openMini();
+  }
+  renderBadge(false);
+  if (mini) {
+    renderMini();
+    // на сторінках кошика й оформлення іконка просто веде на сторінку
+    var onCartPage = /page-(cart|checkout)/.test(document.body.className);
+    $$('[data-minicart-open]').forEach(function (a) {
+      a.setAttribute('aria-expanded', 'false');
+      if (onCartPage) return;
+      a.addEventListener('click', function (e) {
+        if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+        e.preventDefault();
+        openMini();
+      });
+    });
+    $('[data-minicart-close]', mini).addEventListener('click', closeMini);
+    var miniList = $('[data-minicart-list]', mini);
+    var setQty = function (i, v) {
+      if (!cart[i]) return;
+      cart[i].qty = Math.max(1, Math.min(999, v || 1));
+      saveCart(); renderBadge(false); renderMini();
+      var inp = $('[data-mini="qty"][data-i="' + i + '"]', miniList);
+      return inp;
+    };
+    miniList.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-mini]');
+      if (!b || b.tagName === 'INPUT') return;
+      var i = +b.getAttribute('data-i'), act = b.getAttribute('data-mini');
+      if (act === 'remove') {
+        cart.splice(i, 1); saveCart(); renderBadge(false); renderMini();
+        var next = $('[data-mini="remove"]', miniList) || $('[data-minicart-close]', mini);
+        next.focus({ preventScroll: true });
+        return;
+      }
+      var focusAfter = setQty(i, cart[i].qty + (act === 'plus' ? 1 : -1));
+      var again = $('[data-mini="' + act + '"][data-i="' + i + '"]', miniList);
+      (again || focusAfter) && (again || focusAfter).focus({ preventScroll: true });
+    });
+    miniList.addEventListener('change', function (e) {
+      var inp = e.target.closest('[data-mini="qty"]');
+      if (inp) setQty(+inp.getAttribute('data-i'), parseInt(inp.value, 10));
+    });
+    // зміни в іншій вкладці
+    window.addEventListener('storage', function (e) {
+      if (e.key !== CART_KEY) return;
+      try { cart = JSON.parse(e.newValue) || []; } catch (err) { cart = []; }
+      renderBadge(false); renderMini();
+    });
+  }
+
+  /* ---------- Збільшення фото товару (лайтбокс) ---------- */
+  $$('[data-gallery]').forEach(function (g) {
+    var main = $('[data-gallery-main]', g);
+    var thumbs = $$('[data-gallery-thumb]', g);
+    if (!main || typeof HTMLDialogElement !== 'function') return;
+    var srcs = thumbs.length ? thumbs.map(function (t) { return t.getAttribute('data-full'); }) : [main.getAttribute('src')];
+    var alt = main.getAttribute('alt') || '';
+    var lb, img, count, idx = 0, zoomed = false, base = null, ox = 0.5, oy = 0.5, SCALE = 2.2;
+    var activeIndex = function () { var i = thumbs.findIndex(function (t) { return t.classList.contains('is-active'); }); return i < 0 ? 0 : i; };
+
+    function setOrigin(x, y) {
+      ox = Math.max(0, Math.min(1, x)); oy = Math.max(0, Math.min(1, y));
+      img.style.transformOrigin = (ox * 100) + '% ' + (oy * 100) + '%';
+    }
+    function setZoom(on, cx, cy) {
+      zoomed = on;
+      if (on) {
+        base = img.getBoundingClientRect();
+        setOrigin((cx - base.left) / base.width, (cy - base.top) / base.height);
+        img.style.transform = 'scale(' + SCALE + ')';
+      } else {
+        img.style.transform = '';
+      }
+      img.classList.toggle('is-zoomed', on);
+      lb.classList.toggle('is-zoomed', on);
+      img.setAttribute('aria-label', on ? 'Зменшити фото' : 'Збільшити фото');
+    }
+    function show(i) {
+      idx = (i + srcs.length) % srcs.length;
+      if (zoomed) setZoom(false);
+      img.classList.add('is-fading');
+      var next = srcs[idx];
+      var pre = new Image();
+      pre.onload = pre.onerror = function () { img.src = next; img.classList.remove('is-fading'); };
+      pre.src = next;
+      count.textContent = (idx + 1) + ' / ' + srcs.length;
+      $$('.lightbox__thumb', lb).forEach(function (t, k) { t.setAttribute('aria-current', String(k === idx)); });
+      [idx + 1, idx - 1].forEach(function (k) { (new Image()).src = srcs[(k + srcs.length) % srcs.length]; });
+    }
+    function build() {
+      lb = document.createElement('dialog');
+      lb.className = 'lightbox';
+      lb.setAttribute('aria-label', 'Фото товару');
+      var many = srcs.length > 1;
+      lb.innerHTML =
+        '<div class="lightbox__bar"><span class="lightbox__count" aria-live="polite"></span>' +
+        '<button class="lightbox__close" type="button" aria-label="Закрити"><svg class="icon icon--close" aria-hidden="true"><use href="#i-close"></use></svg></button></div>' +
+        '<div class="lightbox__stage">' +
+          (many ? '<button class="lightbox__arrow lightbox__arrow--prev" type="button" aria-label="Попереднє фото"><svg class="icon" aria-hidden="true"><use href="#i-arrow-thin-left"></use></svg></button>' : '') +
+          '<img class="lightbox__img" src="" alt="' + escHtml(alt) + '" draggable="false">' +
+          (many ? '<button class="lightbox__arrow lightbox__arrow--next" type="button" aria-label="Наступне фото"><svg class="icon" aria-hidden="true"><use href="#i-arrow-thin-right"></use></svg></button>' : '') +
+        '</div>' +
+        (many ? '<div class="lightbox__thumbs">' + srcs.map(function (s, k) {
+          return '<button class="lightbox__thumb" type="button" data-k="' + k + '" aria-label="Фото ' + (k + 1) + '"><img src="' + escHtml(s) + '" alt="" loading="lazy"></button>';
+        }).join('') + '</div>' : '');
+      document.body.appendChild(lb);
+      img = $('.lightbox__img', lb); count = $('.lightbox__count', lb);
+      var stage = $('.lightbox__stage', lb);
+      $('.lightbox__close', lb).addEventListener('click', function () { lb.close(); });
+      var prev = $('.lightbox__arrow--prev', lb), next = $('.lightbox__arrow--next', lb);
+      prev && prev.addEventListener('click', function () { show(idx - 1); });
+      next && next.addEventListener('click', function () { show(idx + 1); });
+      $$('.lightbox__thumb', lb).forEach(function (t) { t.addEventListener('click', function () { show(+t.getAttribute('data-k')); }); });
+      lb.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowRight') { e.preventDefault(); show(idx + 1); }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); show(idx - 1); }
+      });
+      lb.addEventListener('close', function () {
+        if (zoomed) setZoom(false);
+        document.documentElement.classList.remove('has-modal');
+        if (thumbs[idx] && !thumbs[idx].classList.contains('is-active')) thumbs[idx].click();
+      });
+      // миша: клік — збільшити/зменшити, рух — оглядати збільшене фото
+      // дотик: подвійний тап — збільшити/зменшити, свайп — гортати, перетягування — оглядати збільшене
+      var down = null, lastTap = 0;
+      stage.addEventListener('pointerdown', function (e) {
+        if (e.target.closest('button')) return;
+        down = { x: e.clientX, y: e.clientY, ox: ox, oy: oy, id: e.pointerId, type: e.pointerType, moved: false };
+        if (zoomed && e.pointerType !== 'mouse') { img.classList.add('is-panning'); stage.setPointerCapture(e.pointerId); }
+      });
+      stage.addEventListener('pointermove', function (e) {
+        if (zoomed && e.pointerType === 'mouse' && base) {
+          setOrigin((e.clientX - base.left) / base.width, (e.clientY - base.top) / base.height);
+          return;
+        }
+        if (!down || e.pointerId !== down.id) return;
+        var dx = e.clientX - down.x, dy = e.clientY - down.y;
+        if (Math.abs(dx) > 6 || Math.abs(dy) > 6) down.moved = true;
+        if (zoomed && base) setOrigin(down.ox - dx / (base.width * (SCALE - 1)), down.oy - dy / (base.height * (SCALE - 1)));
+      });
+      var up = function (e) {
+        if (!down || e.pointerId !== down.id) return;
+        var d = down; down = null;
+        img.classList.remove('is-panning');
+        var dx = e.clientX - d.x;
+        if (!d.moved) {
+          if (!e.target.closest('.lightbox__img')) { if (!zoomed && d.type === 'mouse') lb.close(); return; }
+          if (d.type === 'mouse') { setZoom(!zoomed, e.clientX, e.clientY); return; }
+          var now = Date.now();
+          if (now - lastTap < 320) { setZoom(!zoomed, e.clientX, e.clientY); lastTap = 0; } else lastTap = now;
+          return;
+        }
+        if (!zoomed && Math.abs(dx) > 50 && srcs.length > 1) show(idx + (dx < 0 ? 1 : -1));
+      };
+      stage.addEventListener('pointerup', up);
+      stage.addEventListener('pointercancel', function () { down = null; img.classList.remove('is-panning'); });
+      window.addEventListener('resize', function () { if (zoomed) setZoom(false); });
+    }
+    function open(i) {
+      if (!lb) build();
+      show(i);
+      document.documentElement.classList.add('has-modal');
+      lb.showModal();
+    }
+    var zoomBtn = $('[data-gallery-zoom]', g);
+    zoomBtn && zoomBtn.addEventListener('click', function () { open(activeIndex()); });
+    // клік (не перетягування) по головному фото теж відкриває перегляд
+    var p0 = null;
+    main.addEventListener('pointerdown', function (e) { p0 = { x: e.clientX, y: e.clientY }; });
+    main.addEventListener('click', function (e) {
+      if (p0 && (Math.abs(e.clientX - p0.x) > 6 || Math.abs(e.clientY - p0.y) > 6)) return;
+      open(activeIndex());
+    });
+  });
+
+  /* ---------- Відгуки: форма «Залишити відгук» і відповідь ---------- */
+  var reviewDlg = $('[data-review-dialog]');
+  if (reviewDlg && typeof reviewDlg.showModal === 'function') {
+    var rForm = $('[data-review-form]', reviewDlg), rDone = $('[data-review-done]', reviewDlg);
+    var rStars = $('.rate__stars', reviewDlg), rHint = $('[data-rate-hint]', reviewDlg), rBox = $('[data-rate]', reviewDlg);
+    var HINTS = ['Погано', 'Так собі', 'Нормально', 'Добре', 'Відмінно'];
+    var rValue = function () { var c = $('input:checked', rStars); return c ? +c.value : 0; };
+    var rShow = function (v) { if (v) rStars.setAttribute('data-show', v); else rStars.removeAttribute('data-show'); rHint.textContent = v ? HINTS[v - 1] : 'Оберіть оцінку'; };
+    $$('label', rStars).forEach(function (l, i) { l.addEventListener('mouseenter', function () { rShow(i + 1); }); });
+    rStars.addEventListener('mouseleave', function () { rShow(rValue()); });
+    rStars.addEventListener('change', function () { rShow(rValue()); rBox.classList.remove('is-invalid'); });
+    var openReview = function () {
+      rForm.hidden = false; rDone.hidden = true;
+      document.documentElement.classList.add('has-modal');
+      reviewDlg.showModal();
+    };
+    $$('[data-review-open]').forEach(function (b) { b.addEventListener('click', openReview); });
+    reviewDlg.addEventListener('close', function () { document.documentElement.classList.remove('has-modal'); });
+    $$('[data-modal-close]', reviewDlg).forEach(function (b) { b.addEventListener('click', function () { reviewDlg.close(); }); });
+    reviewDlg.addEventListener('click', function (e) {
+      if (e.target !== reviewDlg) return;
+      var r = reviewDlg.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) reviewDlg.close();
+    });
+    rForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!rForm.checkValidity()) {
+        rForm.classList.add('was-validated');
+        rBox.classList.toggle('is-invalid', !rValue());
+        if (!rValue()) rHint.textContent = 'Оберіть оцінку від 1 до 5';
+        var bad = $('input:invalid, textarea:invalid', rForm);
+        if (bad) bad.focus();
+        return;
+      }
+      // TODO: відправка відгуку на бекенд (FormData(rForm)), публікація після модерації
+      rForm.hidden = true; rDone.hidden = false;
+      rForm.reset(); rForm.classList.remove('was-validated'); rShow(0);
+      $('button', rDone).focus();
+    });
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-review-reply]');
+    if (!b) return;
+    var rv = b.closest('.p-review');
+    var form = $('.reply-form', rv);
+    if (form) { form.remove(); b.setAttribute('aria-expanded', 'false'); return; }
+    var done = $('.reply-done', rv);
+    done && done.remove();
+    form = document.createElement('form');
+    form.className = 'reply-form';
+    form.noValidate = true;
+    form.innerHTML =
+      '<label class="field"><span class="visually-hidden">Ваша відповідь</span><textarea name="reply" rows="3" minlength="2" placeholder="Ваша відповідь…" required></textarea></label>' +
+      '<div class="reply-form__row"><label class="field reply-form__name"><span class="visually-hidden">Ваше ім’я</span><input type="text" name="name" autocomplete="given-name" placeholder="Ваше ім’я" required></label>' +
+      '<button class="btn btn--dark btn--sm" type="submit">Надіслати</button><button class="reply-form__cancel" type="button">Скасувати</button></div>';
+    rv.appendChild(form);
+    b.setAttribute('aria-expanded', 'true');
+    $('textarea', form).focus();
+    $('.reply-form__cancel', form).addEventListener('click', function () { form.remove(); b.setAttribute('aria-expanded', 'false'); b.focus(); });
+    form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      if (!form.checkValidity()) { form.classList.add('was-validated'); $(':invalid', form).focus(); return; }
+      // TODO: відправка відповіді на бекенд
+      var note = document.createElement('p');
+      note.className = 'reply-done';
+      note.setAttribute('role', 'status');
+      note.textContent = 'Дякуємо! Відповідь з’явиться після перевірки модератором.';
+      form.replaceWith(note);
+      b.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  /* ---------- Кнопка «Нагору» ---------- */
+  var toTop = $('[data-to-top]');
+  if (toTop) {
+    toTop.hidden = false;
+    var topTick = false;
+    var updTop = function () {
+      topTick = false;
+      var on = window.scrollY > window.innerHeight * 1.2;
+      toTop.classList.toggle('is-visible', on);
+      toTop.tabIndex = on ? 0 : -1;
+      toTop.setAttribute('aria-hidden', String(!on));
+    };
+    window.addEventListener('scroll', function () { if (!topTick) { topTick = true; requestAnimationFrame(updTop); } }, { passive: true });
+    updTop();
+    toTop.addEventListener('click', function () {
+      scrollToY(0);
+      var logo = $('.header__logo');
+      logo && logo.focus({ preventScroll: true });
+    });
+  }
+
+  /* ---------- Якірні посилання при плавній прокрутці ---------- */
+  if (lenis) {
+    document.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      var a = e.target.closest('a[href^="#"]');
+      if (!a) return;
+      var id = a.getAttribute('href').slice(1);
+      var target = id && document.getElementById(id);
+      if (!target) return;
+      e.preventDefault();
+      lenis.scrollTo(target, { offset: -16 });
+      if (a.classList.contains('skip-link')) { target.setAttribute('tabindex', '-1'); target.focus({ preventScroll: true }); }
     });
   }
 })();
