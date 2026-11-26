@@ -1943,7 +1943,7 @@
       '.about-mission', '.contacts-band', '.contact-form', '.contacts-aside', '.info-section', '.vf-form', '.mp-cta', '.loy-title', '.loy-lead',
       '.acc-card', '.discount-banner', '.otable-wrap', '.fav__empty', '.catalog-head', '.filter-pills'].join(',');
     var RV_GROUP = ['.catalog__grid', '.advantages__list', '.reviews__list', '.insta__grid', '.about-stats', '.info-steps', '.loy-levels',
-      '.loy-terms', '.mp-perks', '.faq-list', '.p-reviews__list', '.acc-stats', '.addr-grid', '.fav__grid'].join(',');
+      '.loy-terms', '.mp-perks', '.faq-list', '.p-reviews__list', '.acc-stats', '.addr-grid', '.fav__grid', '.post-grid'].join(',');
     var fold = window.innerHeight * 0.92;
     var below = function (el) { var r = el.getBoundingClientRect(); return r.height > 0 && r.top > fold; };
     var marked = [];
@@ -1994,5 +1994,54 @@
       }, { threshold: 0.6 });
       counters.forEach(function (el) { cIO.observe(el); });
     }
+  }
+  /* ---------- Блог: рубрики ---------- */
+  $$('[data-blog]').forEach(function (box) {
+    var posts = $$('.post-featured, .post-card', box);
+    var empty = $('[data-blog-empty]', box);
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-filter]');
+      if (!b) return;
+      var f = b.getAttribute('data-filter'), shown = 0;
+      $$('[data-filter]', box).forEach(function (x) {
+        x.classList.toggle('is-active', x === b);
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      // TODO: на CMS рубрика — окрема сторінка/параметр (?cat=...) з пагінацією
+      posts.forEach(function (p) {
+        var on = f === 'all' || p.getAttribute('data-cat') === f;
+        p.hidden = !on;
+        if (on) shown++;
+      });
+      if (empty) empty.hidden = shown > 0;
+    });
+  });
+
+  /* ---------- Стаття: зміст (підсвічування розділу, згортання на мобільних) ---------- */
+  var toc = $('[data-toc]');
+  if (toc) {
+    var tocBox = $('[data-toc-box]', toc);
+    var tocMq = window.matchMedia('(max-width: 1023px)');
+    var tocSync = function () { tocBox.open = !tocMq.matches; };
+    tocSync();
+    tocMq.addEventListener ? tocMq.addEventListener('change', tocSync) : tocMq.addListener(tocSync);
+    // на десктопі зміст не згортається
+    $('summary', tocBox).addEventListener('click', function (e) { if (!tocMq.matches) e.preventDefault(); });
+    var tocLinks = $$('a[href^="#"]', toc);
+    var heads = tocLinks.map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); }).filter(Boolean);
+    var setActive = function () {
+      var y = window.innerHeight * 0.3, cur = null;
+      heads.forEach(function (h) { if (h.getBoundingClientRect().top <= y) cur = h; });
+      tocLinks.forEach(function (a) {
+        var on = !!cur && a.getAttribute('href') === '#' + cur.id;
+        a.classList.toggle('is-active', on);
+        if (on) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+      });
+    };
+    var tocTick = false;
+    window.addEventListener('scroll', function () { if (!tocTick) { tocTick = true; requestAnimationFrame(function () { tocTick = false; setActive(); }); } }, { passive: true });
+    setActive();
+    // на мобільних після переходу за пунктом змісту згортаємо його
+    tocLinks.forEach(function (a) { a.addEventListener('click', function () { if (tocMq.matches) tocBox.open = false; }); });
   }
 })();
